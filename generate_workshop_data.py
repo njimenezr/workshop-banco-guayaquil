@@ -1,6 +1,6 @@
 # Databricks notebook source
 # MAGIC %md
-# MAGIC # Workshop Data Generator — LAFISE Genie Code Workshop
+# MAGIC # Workshop Data Generator — Banco Guayaquil Genie Code Workshop
 # MAGIC
 # MAGIC Genera 5 tablas sintéticas de datos bancarios en `workshop.gold`.
 # MAGIC Incluye defectos de calidad intencionados para el track de Governance.
@@ -17,78 +17,78 @@
 CATALOG = "workshop"
 SCHEMA = "gold"
 
-# Presencia de LAFISE por país
+# Regiones sintéticas (hub territorial) — taller Banco Guayaquil; datos 100% ficticios
 COUNTRIES = {
-    "NI": {
-        "name": "Nicaragua",
+    "GY": {
+        "name": "Costa — Guayas",
         "customers": 500,
         "branches": 28,
-        "cities": ["Managua", "León", "Granada", "Masaya", "Estelí", "Matagalpa", "Chinandega", "Rivas"],
-        "lat_range": (11.0, 15.0),
-        "lon_range": (-87.5, -83.0),
-        "base_portfolio": 180_000_000,   # USD
+        "cities": ["Guayaquil", "Durán", "Samborondón", "Milagro", "Daule", "Playas"],
+        "lat_range": (-3.0, -1.8),
+        "lon_range": (-80.5, -79.5),
+        "base_portfolio": 180_000_000,
     },
-    "CR": {
-        "name": "Costa Rica",
+    "PI": {
+        "name": "Sierra — Pichincha",
         "customers": 380,
         "branches": 22,
-        "cities": ["San José", "Heredia", "Alajuela", "Cartago", "Liberia", "Pérez Zeledón"],
-        "lat_range": (8.0, 11.2),
-        "lon_range": (-85.9, -82.5),
+        "cities": ["Quito", "Cayambe", "Rumiñahui", "Mejía"],
+        "lat_range": (-0.5, 0.4),
+        "lon_range": (-78.7, -78.2),
         "base_portfolio": 220_000_000,
     },
-    "HN": {
-        "name": "Honduras",
+    "AZ": {
+        "name": "Austro — Azuay",
         "customers": 320,
         "branches": 18,
-        "cities": ["Tegucigalpa", "San Pedro Sula", "Choloma", "La Ceiba", "El Progreso"],
-        "lat_range": (13.0, 16.5),
-        "lon_range": (-89.2, -83.2),
+        "cities": ["Cuenca", "Gualaceo", "Paute", "Santa Isabel"],
+        "lat_range": (-3.2, -2.6),
+        "lon_range": (-79.3, -78.6),
         "base_portfolio": 140_000_000,
     },
-    "PA": {
-        "name": "Panamá",
+    "MN": {
+        "name": "Costa — Manabí",
         "customers": 270,
         "branches": 15,
-        "cities": ["Ciudad de Panamá", "David", "Santiago", "Colón", "La Chorrera"],
-        "lat_range": (7.2, 9.6),
-        "lon_range": (-83.0, -77.2),
+        "cities": ["Manta", "Portoviejo", "Bahía de Caráquez", "Chone"],
+        "lat_range": (-1.3, -0.4),
+        "lon_range": (-80.9, -79.6),
         "base_portfolio": 260_000_000,
     },
-    "DO": {
-        "name": "Rep. Dominicana",
+    "OR": {
+        "name": "Costa — El Oro",
         "customers": 250,
         "branches": 14,
-        "cities": ["Santo Domingo", "Santiago", "La Romana", "San Pedro de Macorís", "Puerto Plata"],
-        "lat_range": (17.5, 19.9),
-        "lon_range": (-72.0, -68.3),
+        "cities": ["Machala", "Pasaje", "Santa Rosa", "Huaquillas"],
+        "lat_range": (-3.8, -3.2),
+        "lon_range": (-80.2, -79.6),
         "base_portfolio": 120_000_000,
     },
-    "SV": {
-        "name": "El Salvador",
+    "ES": {
+        "name": "Costa — Esmeraldas",
         "customers": 220,
         "branches": 13,
-        "cities": ["San Salvador", "Santa Ana", "San Miguel", "Soyapango", "Nueva San Salvador"],
-        "lat_range": (13.1, 14.4),
-        "lon_range": (-90.1, -87.7),
+        "cities": ["Esmeraldas", "Atacames", "Muisne", "Rioverde"],
+        "lat_range": (0.6, 1.2),
+        "lon_range": (-79.7, -78.8),
         "base_portfolio": 100_000_000,
     },
-    "GT": {
-        "name": "Guatemala",
+    "LO": {
+        "name": "Sur — Loja",
         "customers": 170,
         "branches": 10,
-        "cities": ["Ciudad de Guatemala", "Quetzaltenango", "Villa Nueva", "Escuintla", "Cobán"],
-        "lat_range": (13.7, 17.8),
-        "lon_range": (-92.2, -88.2),
+        "cities": ["Loja", "Catamayo", "Macará", "Zapotillo"],
+        "lat_range": (-4.4, -3.7),
+        "lon_range": (-80.3, -79.2),
         "base_portfolio": 90_000_000,
     },
-    "CO": {
-        "name": "Colombia",
+    "SD": {
+        "name": "Sierra — Santo Domingo",
         "customers": 290,
         "branches": 16,
-        "cities": ["Bogotá", "Medellín", "Cali", "Barranquilla", "Cartagena", "Bucaramanga", "Pereira"],
-        "lat_range": (-4.2, 12.5),
-        "lon_range": (-77.0, -66.9),
+        "cities": ["Santo Domingo", "La Concordia", "Valle Hermoso"],
+        "lat_range": (-0.4, 0.2),
+        "lon_range": (-79.4, -78.8),
         "base_portfolio": 195_000_000,
     },
 }
@@ -143,7 +143,7 @@ customer_id_counter = 0
 for cc, info in COUNTRIES.items():
     for i in range(info["customers"]):
         customer_id_counter += 1
-        cid = f"LAFISE-{cc}-CLI-{customer_id_counter:06d}"
+        cid = f"BGY-{cc}-CLI-{customer_id_counter:06d}"
         city = np.random.choice(info["cities"])
         segment = np.random.choice(SEGMENTS, p=SEGMENT_WEIGHTS)
         risk = np.random.choice(RISK_PROFILES, p=RISK_WEIGHTS)
@@ -155,7 +155,7 @@ for cc, info in COUNTRIES.items():
 
         acquisition_date = date(2010, 1, 1) + timedelta(days=int(np.random.uniform(0, 365 * 14)))
 
-        # Relationship managers per country
+        # Relationship managers per region
         rm_names = [
             f"Ana García ({cc})", f"Carlos Méndez ({cc})", f"María López ({cc})",
             f"Jorge Solís ({cc})", f"Patricia Vega ({cc})", f"Roberto Acuña ({cc})"
@@ -233,7 +233,7 @@ for cc, info in COUNTRIES.items():
 
         branch_rows.append({
             "branch_id": bid,
-            "branch_name": f"LAFISE {city} #{i+1}",
+            "branch_name": f"Banco Guayaquil {city} #{i+1}",
             "city": city,
             "country_code": cc,
             "country_name": info["name"],
@@ -284,14 +284,14 @@ sample_customers = valid_customer_ids[:600]
 for cid in sample_customers:
     # Obtener datos del cliente
     cust = df_customers[df_customers["customer_id"] == cid].iloc[0]
-    cc = cust["country_code"] if pd.notna(cust["country_code"]) else "NI"
+    cc = cust["country_code"] if pd.notna(cust["country_code"]) else "GY"
     segment = cust["segment"]
 
     # Frecuencia según segmento
     freq_per_month = {"Retail": 8, "PYME": 15, "Corporativo": 25, "Premium": 12}.get(segment, 8)
 
-    # Monto base según segmento y país
-    country_mult = {"NI": 1.0, "CR": 1.8, "HN": 0.9, "PA": 2.2, "DO": 1.0, "SV": 0.95, "GT": 0.85, "CO": 1.3}
+    # Monto base según segmento y región
+    country_mult = {"GY": 1.0, "PI": 1.8, "AZ": 0.9, "MN": 2.2, "OR": 1.0, "ES": 0.95, "LO": 0.85, "SD": 1.3}
     base_amount = {"Retail": 350, "PYME": 5000, "Corporativo": 50000, "Premium": 8000}.get(segment, 350)
     base_amount *= country_mult.get(cc, 1.0)
 
@@ -337,7 +337,7 @@ null_date_idx = np.random.choice(len(df_tx), 30, replace=False)
 df_tx.loc[null_date_idx, "transaction_date"] = None
 
 # 60 filas: customer_id huérfano (no existe en dim_clientes — integridad referencial rota)
-orphan_cids = [f"LAFISE-XX-CLI-{900000+i:06d}" for i in range(60)]
+orphan_cids = [f"BGY-XX-CLI-{900000+i:06d}" for i in range(60)]
 orphan_idx = np.random.choice(len(df_tx), 60, replace=False)
 for i, idx in enumerate(orphan_idx):
     df_tx.loc[idx, "customer_id"] = orphan_cids[i]
@@ -371,9 +371,9 @@ for cc, info in COUNTRIES.items():
     for i in range(n_loans):
         loan_counter += 1
         product = np.random.choice(PRODUCT_TYPES, p=PRODUCT_WEIGHTS)
-        loan_id = f"LAFISE-{cc}-{product[:3].upper()}-{loan_counter:06d}"
+        loan_id = f"BGY-{cc}-{product[:3].upper()}-{loan_counter:06d}"
 
-        cid = np.random.choice(country_customers) if country_customers else f"LAFISE-{cc}-CLI-000001"
+        cid = np.random.choice(country_customers) if country_customers else f"BGY-{cc}-CLI-000001"
 
         disb_date = date(2020, 1, 1) + timedelta(days=int(np.random.uniform(0, 365 * 5)))
 
@@ -388,7 +388,7 @@ for cc, info in COUNTRIES.items():
 
         maturity_date = disb_date + timedelta(days=term_months * 30)
 
-        # Monto original según producto y país
+        # Monto original según producto y región
         amount_ranges = {
             "Consumo": (2000, 25000),
             "Hipoteca": (40000, 250000),
@@ -426,7 +426,7 @@ for cc, info in COUNTRIES.items():
         status_map = {"Al_Dia": "Vigente", "1-30": "Vigente", "31-60": "Vencido", "61-90": "Vencido", "Mayor_90": "Castigado"}
         status = status_map[dpd_bucket]
 
-        # Tasa de interés según producto y país (tasas centroamericanas)
+        # Tasa de interés según producto (mercado regional)
         rate_ranges = {
             "Consumo": (0.14, 0.32),
             "Hipoteca": (0.08, 0.15),
@@ -472,11 +472,8 @@ null_rate_idx = np.random.choice(len(df_loans), 5, replace=False)
 df_loans.loc[null_rate_idx, "interest_rate"] = None
 
 # 12 filas: dpd_bucket inconsistente con days_past_due
-# (e.g., days_past_due=45 pero bucket="Al_Dia")
 inconsistent_idx = np.random.choice(len(df_loans), 12, replace=False)
 for idx in inconsistent_idx:
-    actual_dpd = df_loans.loc[idx, "days_past_due"]
-    # Asignar bucket incorrecto
     correct_bucket = df_loans.loc[idx, "dpd_bucket"]
     wrong_options = [b for b in DPD_BUCKETS if b != correct_bucket]
     df_loans.loc[idx, "dpd_bucket"] = np.random.choice(wrong_options)
@@ -502,36 +499,27 @@ for cc, info in COUNTRIES.items():
     base_port = info["base_portfolio"]
 
     for d in kpi_date_range:
-        # Crecimiento anual ~4%
         years_from_start = (d - pd.Timestamp("2024-01-01")).days / 365
         growth = 1 + 0.04 * years_from_start
 
-        # Estacionalidad mensual
         month_mult = {1: 0.95, 2: 0.90, 3: 0.97, 4: 1.00, 5: 1.02, 6: 1.00,
                       7: 1.03, 8: 1.01, 9: 0.98, 10: 1.00, 11: 1.04, 12: 1.08}[d.month]
 
         noise = np.random.normal(1.0, 0.03)
         total_port = round(base_port * growth * month_mult * noise, 2)
 
-        # NPL ratio (tasa de mora) — varía por país y tiempo
-        npl_base = {"NI": 0.042, "CR": 0.028, "HN": 0.051, "PA": 0.022, "DO": 0.055,
-                    "SV": 0.048, "GT": 0.062, "CO": 0.035}.get(cc, 0.04)
+        npl_base = {"GY": 0.042, "PI": 0.028, "AZ": 0.051, "MN": 0.022, "OR": 0.055,
+                    "ES": 0.048, "LO": 0.062, "SD": 0.035}.get(cc, 0.04)
         npl_ratio = round(npl_base + np.random.normal(0, 0.003), 4)
         npl_ratio = max(0.005, npl_ratio)
 
-        # Desembolsos del mes
         new_disb = round(total_port * np.random.uniform(0.008, 0.025) * month_mult, 2)
-
-        # Cobros / recuperaciones
         collections = round(total_port * np.random.uniform(0.005, 0.015), 2)
-
-        # Provisiones
         provision_exp = round(total_port * npl_ratio * np.random.uniform(0.15, 0.30), 2)
 
         active_cust = int(info["customers"] * np.random.uniform(0.75, 0.95))
         new_cust = int(np.random.uniform(0, 8))
 
-        # YoY growth disponible solo desde 2025
         yoy_growth = None
         if d.year >= 2025:
             yoy_growth = round(np.random.normal(0.04, 0.02), 4)
@@ -553,19 +541,15 @@ for cc, info in COUNTRIES.items():
 df_kpis = pd.DataFrame(kpi_rows)
 
 # ── Inyectar defectos DQ ──
-# 8 filas: npl_ratio > 1.0 (imposible — mayor que la cartera total)
 invalid_npl_idx = np.random.choice(len(df_kpis), 8, replace=False)
 df_kpis.loc[invalid_npl_idx, "npl_ratio"] = np.random.uniform(1.5, 3.0, 8)
 
-# 5 filas: total_portfolio = 0 con new_disbursements > 0
 zero_port_idx = np.random.choice(len(df_kpis), 5, replace=False)
 df_kpis.loc[zero_port_idx, "total_portfolio"] = 0.0
 
-# 3 filas: yoy_portfolio_growth = 999.99 (outlier centinela)
 sentinel_idx = df_kpis[df_kpis["yoy_portfolio_growth"].notna()].sample(3).index
 df_kpis.loc[sentinel_idx, "yoy_portfolio_growth"] = 999.99
 
-# 6 filas: country_code = "DESCONOCIDO"
 unknown_idx = np.random.choice(len(df_kpis), 6, replace=False)
 df_kpis.loc[unknown_idx, "country_code"] = "DESCONOCIDO"
 
@@ -584,7 +568,7 @@ print(f"✅ {CATALOG}.{SCHEMA}.fact_kpis_diarios escrita")
 # COMMAND ----------
 
 print("=" * 65)
-print("GENERACIÓN DE DATOS WORKSHOP LAFISE — RESUMEN")
+print("GENERACIÓN DE DATOS WORKSHOP BANCO GUAYAQUIL — RESUMEN")
 print("=" * 65)
 
 tables = [
@@ -605,7 +589,7 @@ print("  fact_kpis_diarios:    8 NPL>1.0, 5 portfolio=0, 3 centinelas, 6 país D
 print()
 print(f"Total defectos: ~382")
 print()
-print("Países LAFISE incluidos:")
+print("Regiones sintéticas (Ecuador) incluidas:")
 for cc, info in COUNTRIES.items():
     print(f"  {cc}: {info['name']} — {info['customers']} clientes, {info['branches']} sucursales, ${info['base_portfolio']/1e6:.0f}M cartera")
 print("=" * 65)

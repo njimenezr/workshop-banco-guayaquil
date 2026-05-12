@@ -3,29 +3,28 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Genie Code Workshop — Grupo Lafise</title>
+  <title>Genie Code Workshop — Banco Guayaquil</title>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
   <style>
     :root {
-      --lafise-primary: #00583C;
-      --lafise-accent: #018765;
-      --lafise-dark: #002519;
-      --lafise-green: #00583C;
+      --brand-primary: #004A98;
+      --brand-accent: #0078D4;
+      --brand-dark: #002347;
       --bg: #FFFFFF;
       --bg-light: #F6F6F6;
       --bg-card: #F6F6F6;
       --bg-card-h: #EFEFEF;
-      --text: #002519;
+      --text: #002347;
       --text2: #6F6F6F;
       --text3: #999999;
-      --ok: #00583C;
+      --ok: #004A98;
       --border: #E8E8E8;
       --border2: #D4D4D4;
       --radius: 12px;
     }
     * { margin:0; padding:0; box-sizing:border-box; }
     body { font-family:'DM Sans',system-ui,sans-serif; background:var(--bg); color:var(--text); min-height:100vh; -webkit-font-smoothing:antialiased; }
-    ::selection { background:var(--lafise-primary); color:#FFF; }
+    ::selection { background:var(--brand-primary); color:#FFF; }
 
     /* ===== HEADER ===== */
     .topbar {
@@ -37,8 +36,12 @@
       display:flex; align-items:center; justify-content:space-between;
     }
     .topbar-left { display:flex; align-items:center; gap:16px; }
+    .brand-wordmark {
+      font-size:20px; font-weight:700; color:var(--brand-primary);
+      letter-spacing:-0.03em; line-height:1.15; max-width:220px;
+    }
     .topbar-logo {
-      font-size:36px; font-weight:700; color:var(--lafise-primary);
+      font-size:36px; font-weight:700; color:var(--brand-primary);
       line-height:1; cursor:pointer; letter-spacing:-2px;
       font-family:'DM Sans',sans-serif;
     }
@@ -48,15 +51,15 @@
       font-size:14px; font-weight:500; color:var(--text); text-decoration:none;
       padding:4px 0; border-bottom:2px solid transparent; transition:all .2s;
     }
-    .topbar-nav a:hover { color:var(--lafise-accent); }
-    .topbar-nav a.active { border-bottom-color:var(--lafise-primary); font-weight:700; }
+    .topbar-nav a:hover { color:var(--brand-accent); }
+    .topbar-nav a.active { border-bottom-color:var(--brand-primary); font-weight:700; }
     .btn-enter {
-      background:transparent; border:2px solid var(--lafise-dark);
-      color:var(--lafise-dark); padding:10px 28px; border-radius:24px;
+      background:transparent; border:2px solid var(--brand-dark);
+      color:var(--brand-dark); padding:10px 28px; border-radius:24px;
       font-family:inherit; font-size:14px; font-weight:700;
       cursor:pointer; transition:all .2s;
     }
-    .btn-enter:hover { background:var(--lafise-dark); color:#FFF; }
+    .btn-enter:hover { background:var(--brand-dark); color:#FFF; }
 
     /* ===== CATEGORY STRIP ===== */
     .cat-strip {
@@ -72,7 +75,7 @@
       padding-bottom:12px; border-bottom:3px solid transparent;
       cursor:default; min-width:80px; transition:border-color .2s;
     }
-    .cat-item.active { border-bottom-color:var(--lafise-primary); }
+    .cat-item.active { border-bottom-color:var(--brand-primary); }
     .cat-item.disabled { opacity:.4; cursor:not-allowed; }
     .cat-item.disabled .cat-label { color:var(--text3); }
     .cat-icon { line-height:1; }
@@ -135,7 +138,7 @@
       color:var(--text2); padding:8px 18px; border-radius:24px;
       cursor:pointer; font-family:inherit; font-size:13px; font-weight:600; transition:all .2s;
     }
-    .btn-back:hover { border-color:var(--lafise-dark); color:var(--lafise-dark); }
+    .btn-back:hover { border-color:var(--brand-dark); color:var(--brand-dark); }
 
     /* Progress */
     .progress { margin-bottom:20px; }
@@ -183,11 +186,11 @@
       text-transform:uppercase; letter-spacing:.06em;
     }
     .btn-copy {
-      background:var(--lafise-accent); color:#FFF; border:none;
+      background:var(--brand-accent); color:#FFF; border:none;
       padding:6px 14px; border-radius:20px; cursor:pointer;
       font-family:inherit; font-size:12px; font-weight:600; transition:all .2s;
     }
-    .btn-copy:hover { background:#016B53; }
+    .btn-copy:hover { background:#003A78; }
     .btn-copy.copied { background:var(--ok); }
     .prompt-box {
       background:var(--bg-light); border:1px solid var(--border);
@@ -228,7 +231,7 @@
     .btn-prev {
       background:transparent; border:2px solid var(--border2); color:var(--text2);
     }
-    .btn-prev:hover { border-color:var(--lafise-dark); color:var(--lafise-dark); }
+    .btn-prev:hover { border-color:var(--brand-dark); color:var(--brand-dark); }
     .btn-prev:disabled { color:var(--text3); border-color:var(--border); cursor:default; }
     .btn-next { border:none; color:#FFF; font-weight:700; }
     .btn-next:hover { filter:brightness(1.1); }
@@ -256,11 +259,11 @@
     .faq-toggle { color:var(--text3); font-size:20px; transition:transform .2s; }
 
     /* Footer */
-    .lafise-footer {
-      background:var(--lafise-dark); color:#FFF; padding:32px;
+    .brand-footer {
+      background:var(--brand-dark); color:#FFF; padding:32px;
       text-align:center; font-size:13px; margin-top:48px;
     }
-    .lafise-footer a { color:#A3D9C2; text-decoration:none; }
+    .brand-footer a { color:#9EC9FF; text-decoration:none; }
   </style>
 </head>
 <body>
@@ -270,7 +273,7 @@
     <div class="topbar-inner">
       <div class="topbar-left">
         <div class="topbar-logo" onclick="goBack()">
-          <img src="img/grupo-lafise-logo.svg" alt="Grupo Lafise" height="44">
+          <span class="brand-wordmark">Banco Guayaquil</span>
         </div>
         <nav class="topbar-nav" id="topnav">
           <a href="#" class="active">Workshop</a>
@@ -285,8 +288,8 @@
   <div id="app"></div>
 
   <!-- FOOTER -->
-  <div class="lafise-footer">
-    Genie Code Workshop — Grupo Lafise &amp; <a href="#">Databricks</a> — 2026
+  <div class="brand-footer">
+    Genie Code Workshop — Banco Guayaquil &amp; <a href="#">Databricks</a> — 2026
   </div>
 
   <script>

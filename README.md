@@ -1,6 +1,6 @@
-# Genie Code Workshop — Grupo LAFISE
+# Genie Code Workshop — Banco Guayaquil
 
-Workshop práctico de Databricks Genie Code adaptado para el equipo de LAFISE. Cubre 4 tracks de 105 minutos cada uno usando datos sintéticos bancarios de los 8 países donde opera LAFISE.
+Workshop práctico de Databricks Genie Code adaptado para **Banco Guayaquil**. Cubre 4 tracks de 105 minutos cada uno usando datos sintéticos bancarios por **regiones de Ecuador** (identificadores ficticios GY, PI, AZ, MN, OR, ES, LO, SD en el catálogo `workshop.gold`).
 
 ---
 
@@ -10,7 +10,7 @@ Workshop práctico de Databricks Genie Code adaptado para el equipo de LAFISE. C
 |---|---|---|
 | ⚙️ Data Engineering | Pipelines PySpark, ingesta medallion, reconciliación core bancario, Jobs nocturnos | 105 min |
 | 📊 BI & Analytics | SQL desde lenguaje natural, Metric Views (NPL/mora), Genie Spaces, dashboards de riesgo | 105 min |
-| 🧠 Data Science & ML | Scoring crediticio, MLflow, Model Serving, applyInPandas por país/segmento, alertas SARLAFT | 105 min |
+| 🧠 Data Science & ML | Scoring crediticio, MLflow, Model Serving, applyInPandas por región/segmento, alertas SARLAFT | 105 min |
 | 🛡️ Data Governance | DQ regulatorio, CLS/RLS para datos financieros, framework de auditoría, Data Academy | 105 min |
 
 ---
@@ -62,7 +62,7 @@ Estos pasos los ejecuta el facilitador **antes del workshop**. Tiempo estimado: 
 1. En la barra lateral, haz clic en **Catalog** (ícono de catálogo).
 2. Navega a **workshop** → **gold**.
 3. Confirma que las 5 tablas existen y tienen datos:
-   - `dim_clientes` (~2,400 filas)
+   - `dim_clientes` (~2,500 filas)
    - `dim_sucursales` (~136 filas)
    - `fact_transacciones` (~200K filas)
    - `fact_cartera_creditos` (~5,000 filas)
@@ -83,7 +83,7 @@ GRANT USE SCHEMA ON SCHEMA workshop.gold TO `workshop_users`;
 GRANT SELECT ON ALL TABLES IN SCHEMA workshop.gold TO `workshop_users`;
 ```
 
-> Reemplaza `` `workshop_users` `` por el nombre real del grupo en el workspace de LAFISE. Si no existe un grupo, agrégalo desde **Settings → Identity & Access → Groups**.
+> Reemplaza `` `workshop_users` `` por el nombre real del grupo en el workspace de Banco Guayaquil. Si no existe un grupo, agrégalo desde **Settings → Identity & Access → Groups**.
 
 ---
 
@@ -131,12 +131,12 @@ La app muestra las instrucciones interactivas del workshop a los participantes.
 # Instala la CLI si no la tienes
 pip install databricks-cli
 
-# Sube el código al workspace
-databricks workspace import_dir . /Workspace/Users/<tu-usuario>/genie-lafise-workshop --overwrite
+# Sube el código al workspace (ajusta <tu-usuario> y la carpeta si lo deseas)
+databricks workspace import_dir . /Workspace/Users/<tu-usuario>/genie-bg-workshop --overwrite
 
 # Despliega la app
-databricks apps deploy genie-lafise-workshop \
-  --source-code-path /Workspace/Users/<tu-usuario>/genie-lafise-workshop
+databricks apps deploy genie-bg-workshop \
+  --source-code-path /Workspace/Users/<tu-usuario>/genie-bg-workshop
 ```
 
 **Opción B — Desde la UI:**
@@ -165,7 +165,7 @@ Antes de que lleguen los participantes, confirma cada punto:
 ## Estructura del proyecto
 
 ```
-genie-code-workshop/
+genie-bg-workshop/
 ├── app.yaml                    # Configuración Databricks Apps
 ├── main.py                     # Backend FastAPI
 ├── requirements.txt            # Dependencias Python
@@ -174,29 +174,32 @@ genie-code-workshop/
 │   └── tracks.json             # Contenido de los 4 tracks (pasos, prompts, FAQs)
 └── frontend/
     ├── index.html              # App React (single-page)
-    └── img/                    # Logos e íconos
+    ├── index_static.html       # Versión con datos embebidos (sin backend)
+    └── img/                    # Íconos de tracks y lockups
 ```
 
 ---
 
-## Países LAFISE incluidos en los datos
+## Regiones sintéticas (Ecuador) en los datos
 
-| Código | País | Clientes | Cartera base |
+| Código | Región (ficticia para el taller) | Clientes | Cartera base |
 |---|---|---|---|
-| NI | Nicaragua | 500 | $180M |
-| CR | Costa Rica | 380 | $220M |
-| HN | Honduras | 320 | $140M |
-| PA | Panamá | 270 | $260M |
-| DO | Rep. Dominicana | 250 | $120M |
-| SV | El Salvador | 220 | $100M |
-| GT | Guatemala | 170 | $90M |
-| CO | Colombia | 290 | $195M |
+| GY | Costa — Guayas | 500 | $180M |
+| PI | Sierra — Pichincha | 380 | $220M |
+| AZ | Austro — Azuay | 320 | $140M |
+| MN | Costa — Manabí | 270 | $260M |
+| OR | Costa — El Oro | 250 | $120M |
+| ES | Costa — Esmeraldas | 220 | $100M |
+| LO | Sur — Loja | 170 | $90M |
+| SD | Sierra — Santo Domingo | 290 | $195M |
+
+La columna `country_code` conserva el nombre por compatibilidad con el esquema del workshop; semánticamente representa **código de región** dentro del dataset sintético.
 
 ---
 
 ## Notas para el facilitador
 
-- Los datos son **100% sintéticos** — no contienen información real de clientes de LAFISE.
+- Los datos son **100% sintéticos** — no contienen información real de Banco Guayaquil ni de sus clientes.
 - Las tablas incluyen ~382 defectos de calidad intencionados para el track de Governance.
 - El track de Data Science requiere ML Runtime en el cluster (para XGBoost y MLflow).
 - Los steps que usan Foundation Model API tienen una advertencia visible en la app — ten un notebook de respaldo con el output esperado por si el endpoint no responde.
