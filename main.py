@@ -42,6 +42,7 @@ def list_tracks():
             "estimatedMinutes": t["estimatedMinutes"],
             "stepCount": len(t["steps"]),
             "participantCount": t.get("participantCount", 0),
+            "strip": t.get("strip", "genie"),
         }
         for t in TRACKS_DATA["tracks"]
     ]

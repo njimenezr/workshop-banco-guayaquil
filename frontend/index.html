@@ -73,8 +73,9 @@
     .cat-item {
       display:flex; flex-direction:column; align-items:center; gap:6px;
       padding-bottom:12px; border-bottom:3px solid transparent;
-      cursor:default; min-width:80px; transition:border-color .2s;
+      min-width:80px; transition:border-color .2s;
     }
+    .cat-item:not(.disabled) { cursor:pointer; }
     .cat-item.active { border-bottom-color:var(--brand-primary); }
     .cat-item.disabled { opacity:.4; cursor:not-allowed; }
     .cat-item.disabled .cat-label { color:var(--text3); }
@@ -298,16 +299,20 @@ const COLORS = {
   'data-engineering':'#FF6D00',
   'bi-analytics':'#DA291C',
   'data-science':'#7C3AED',
-  'data-governance':'#0891B2'
+  'data-governance':'#0891B2',
+  'sdp-medallion-bancario':'#C2410C',
+  'sdp-calidad-datos-lakeflow':'#0D9488'
 };
 const TRACK_IMAGES = {
   'data-engineering':'img/track-engineering.svg',
   'bi-analytics':'img/track-bi.svg',
   'data-science':'img/track-datascience.svg',
-  'data-governance':'img/track-governance.svg'
+  'data-governance':'img/track-governance.svg',
+  'sdp-medallion-bancario':'img/track-engineering.svg',
+  'sdp-calidad-datos-lakeflow':'img/track-governance.svg'
 };
 
-let state = { view:'landing', tracks:[], trackData:null, step:0, done:{} };
+let state = { view:'landing', tracks:[], strip:'genie', trackData:null, step:0, done:{} };
 
 function loadProgress(id) {
   try { return new Set(JSON.parse(localStorage.getItem('ws-'+id)||'[]')); } catch(e) { return new Set(); }
@@ -339,6 +344,11 @@ function goBack() {
   window.scrollTo(0,0);
 }
 
+function setStrip(s) {
+  state.strip = s;
+  render();
+}
+
 function setStep(i) {
   state.step = i;
   render();
@@ -362,7 +372,8 @@ function copyText(text, btn) {
 function esc(s) { const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
 
 function renderLanding() {
-  const cards = state.tracks.map(t => {
+  const stripTracks = state.tracks.filter(t => (t.strip || 'genie') === state.strip);
+  const cards = stripTracks.map(t => {
     const c = COLORS[t.id]||'#DA291C';
     const progress = loadProgress(t.id);
     const pct = t.stepCount > 0 ? Math.round((progress.size / t.stepCount)*100) : 0;
@@ -385,27 +396,36 @@ function renderLanding() {
     </div>`;
   }).join('');
 
+  const genieCls = 'cat-item' + (state.strip === 'genie' ? ' active' : '');
+  const sdpCls = 'cat-item' + (state.strip === 'sdp' ? ' active' : '');
+  const aibiCls = 'cat-item disabled' + (state.strip === 'aibi' ? ' active' : '');
+  const emptyMsg = state.strip === 'aibi'
+    ? '<p style="color:var(--text2);font-size:15px;max-width:520px;margin-bottom:16px">Módulo AI/BI en preparación.</p>'
+    : (cards.length === 0 ? '<p style="color:var(--text2);margin-bottom:16px">No hay workshops en esta categoría.</p>' : '');
+  const title = state.strip === 'genie' ? 'Genie Code — elige tu track'
+    : state.strip === 'sdp' ? 'Lakeflow SDP — elige tu workshop' : 'AI/BI — próximamente';
+
   return `
     <div class="cat-strip">
       <div class="cat-strip-inner">
-        <div class="cat-item active">
-          <div class="cat-icon"><img src="img/genie-lockup.svg" alt="Databricks Genie"></div>
+        <div class="${genieCls}" onclick="setStrip('genie')" role="button" tabindex="0">
+          <div class="cat-icon"><img src="img/databricks-symbol.svg" alt="Databricks"></div>
           <div class="cat-label">Genie Code<br>Workshop</div>
         </div>
-        <div class="cat-item disabled">
+        <div class="${aibiCls}" title="Próximamente">
           <div class="cat-icon"><img src="img/databricks-symbol.svg" alt="AI/BI"></div>
           <div class="cat-label">AI/BI<br>Workshop</div>
           <div class="cat-badge">PRONTO</div>
         </div>
-        <div class="cat-item disabled">
-          <div class="cat-icon"><img src="img/databricks-symbol.svg" alt="Spark"></div>
+        <div class="${sdpCls}" onclick="setStrip('sdp')" role="button" tabindex="0">
+          <div class="cat-icon"><img src="img/databricks-symbol.svg" alt="Spark SDP"></div>
           <div class="cat-label">Spark Declarative<br>Pipelines</div>
-          <div class="cat-badge">PRONTO</div>
         </div>
       </div>
     </div>
     <div class="container">
-      <h1 class="section-title">Elige tu track</h1>
+      <h1 class="section-title">${title}</h1>
+      ${emptyMsg}
       <div class="grid">${cards}</div>
     </div>`;
 }
@@ -424,7 +444,7 @@ function renderTrack() {
     let sty = '';
     if (d) cls += ' done';
     if (act) { cls += ' active'; sty = `border-color:${c};${d?'':`background:${c}10;color:${c}`}`; }
-    return `<button class="${cls}" style="${sty}" onclick="setStep(${i})">${d?'✓':st.stepNumber}</button>`;
+    return `<button type="button" class="${cls}" style="${sty}" onclick="setStep(${i})">${d?'✓':st.stepNumber}</button>`;
   }).join('');
 
   let promptHtml = '';

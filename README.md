@@ -162,6 +162,20 @@ Antes de que lleguen los participantes, confirma cada punto:
 
 ---
 
+## HTML para compartir (sin servidor)
+
+Para enviar la guía por correo, Teams o subirla a un bucket estático sin usar FastAPI:
+
+1. Regenera el archivo único (embebe `data/tracks.json` e íconos SVG):
+
+   ```bash
+   python3 scripts/build_static_share_html.py
+   ```
+
+2. Entrega a los participantes el archivo **`frontend/workshop-app-compartir.html`**. Pueden abrirlo directamente en el navegador (doble clic) o puedes publicarlo en cualquier hosting de archivos estáticos.
+
+---
+
 ## Estructura del proyecto
 
 ```
@@ -170,12 +184,15 @@ genie-bg-workshop/
 ├── main.py                     # Backend FastAPI
 ├── requirements.txt            # Dependencias Python
 ├── generate_workshop_data.py   # Genera las tablas workshop.gold.* (ejecutar una vez)
+├── scripts/
+│   └── build_static_share_html.py  # Genera workshop-app-compartir.html
 ├── data/
-│   └── tracks.json             # Contenido de los 4 tracks (pasos, prompts, FAQs)
+│   └── tracks.json             # Contenido de los tracks (pasos, prompts, FAQs)
 └── frontend/
-    ├── index.html              # App React (single-page)
-    ├── index_static.html       # Versión con datos embebidos (sin backend)
-    └── img/                    # Íconos de tracks y lockups
+    ├── index.html              # App (single-page) con API /api/tracks
+    ├── workshop-app-compartir.html  # Guía autocontenida para participantes (regenerar con el script)
+    ├── index_static.html       # Legado: datos embebidos (preferir workshop-app-compartir.html)
+    └── img/                    # Íconos de tracks
 ```
 
 ---
