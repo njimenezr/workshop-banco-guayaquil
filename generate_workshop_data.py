@@ -565,6 +565,57 @@ print(f"✅ {CATALOG}.{SCHEMA}.fact_kpis_diarios escrita")
 # COMMAND ----------
 
 # MAGIC %md
+# MAGIC ## CSV de “llegada del core” + esquemas medallión (Genie Data Engineering)
+# MAGIC
+# MAGIC El track **Data Engineering** (Genie Code) simula un archivo diario del core bancario. Esas filas salen de **`gold.fact_transacciones`** (mismo universo de datos que el resto del workshop).
+# MAGIC
+# MAGIC Se crean también `workshop.bronze` y `workshop.silver` vacíos para que el código que genera Genie en el paso “medallión” pueda escribir sin error de esquema inexistente.
+# MAGIC
+# MAGIC **Ruta del CSV (única):** `/Volumes/workshop/default/raw/transacciones_nuevas.csv`
+# MAGIC
+# MAGIC El módulo **SDP** (`sdp-workshop/`) sigue usando **`/Volumes/workshop/sdp_landing/raw`** (pedidos JSON) — son dos fuentes distintas en el mismo catálogo: CSV bancario vs JSON de demo Lakeflow.
+
+# COMMAND ----------
+
+try:
+    # Esquemas para el laboratorio Genie (medallión PySpark)
+    for _sch in ("bronze", "silver"):
+        spark.sql(f"CREATE SCHEMA IF NOT EXISTS {CATALOG}.{_sch}")
+        print(f"✅ Esquema {CATALOG}.{_sch}")
+
+    # Volumen UC para exportar CSV (misma convención /Volumes/cat/schema/vol)
+    spark.sql(f"CREATE SCHEMA IF NOT EXISTS {CATALOG}.default")
+    spark.sql(f"CREATE VOLUME IF NOT EXISTS {CATALOG}.default.raw")
+    print(f"✅ Volumen {CATALOG}.default.raw")
+
+    RAW_VOL = f"/Volumes/{CATALOG}/default/raw"
+    EXPORT_DIR = f"{RAW_VOL}/_export_transacciones_tmp"
+
+    try:
+        dbutils.fs.rm(EXPORT_DIR, recurse=True)
+    except Exception:
+        pass
+
+    # Exportar desde la misma tabla que usa el resto del workshop (cabecera = columnas de fact_transacciones)
+    _tx_export = spark.table(f"{CATALOG}.{SCHEMA}.fact_transacciones")
+    _tx_export.coalesce(1).write.mode("overwrite").option("header", True).option("compression", "none").csv(EXPORT_DIR)
+
+    parts = [f.path for f in dbutils.fs.ls(EXPORT_DIR) if f.name.startswith("part-") and f.name.endswith(".csv")]
+    if not parts:
+        raise RuntimeError("No se generó part-*.csv en la exportación")
+    parts.sort()
+    TARGET_CSV = f"{RAW_VOL}/transacciones_nuevas.csv"
+    dbutils.fs.cp(parts[0], TARGET_CSV)
+    dbutils.fs.rm(EXPORT_DIR, recurse=True)
+    print(f"✅ CSV exportado (desde gold.fact_transacciones): {TARGET_CSV}")
+    print("   Úsalo en el paso Genie 'Pipeline medallión' con spark.read.option('header',true).csv(...)")
+except Exception as e:
+    print(f"⚠️ No se pudo crear volumen/CSV o esquemas bronze/silver: {e}")
+    print("   El facilitador puede crear workshop.default.raw, workshop.bronze, workshop.silver y exportar manualmente.")
+
+# COMMAND ----------
+
+# MAGIC %md
 # MAGIC ## Resumen de Validación
 
 # COMMAND ----------
@@ -596,3 +647,6 @@ for cc, info in COUNTRIES.items():
     print(f"  {cc}: {info['name']} — {info['customers']} clientes, {info['branches']} sucursales, ${info['base_portfolio']/1e6:.0f}M cartera")
 print("=" * 65)
 print("✅ Generación completa. Workshop listo.")
+print()
+print("Genie Data Engineering: CSV del core en /Volumes/workshop/default/raw/transacciones_nuevas.csv")
+print("Lakeflow SDP (sdp-workshop): JSON en /Volumes/workshop/sdp_landing/raw/")

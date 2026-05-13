@@ -1,6 +1,6 @@
 # Genie Code Workshop — Banco Guayaquil
 
-Workshop práctico de Databricks Genie Code adaptado para **Banco Guayaquil**. Cubre 4 tracks de 105 minutos cada uno usando datos sintéticos bancarios por **regiones de Ecuador** (identificadores ficticios GY, PI, AZ, MN, OR, ES, LO, SD en el catálogo `workshop.gold`).
+Workshop práctico de Databricks Genie Code adaptado para **Banco Guayaquil**. Cubre 4 tracks de ~105 minutos sobre el catálogo **`workshop`**: datos sintéticos en **`gold`**, CSV de transacciones para medallión PySpark (Genie), y el módulo **Lakeflow SDP** en `sdp-workshop/` sobre el mismo catálogo. Así Genie (velocidad y variedad de tareas) y SDP (pipelines declarativos claros) comparten contexto.
 
 ---
 
@@ -8,7 +8,7 @@ Workshop práctico de Databricks Genie Code adaptado para **Banco Guayaquil**. C
 
 | Track | Descripción | Duración |
 |---|---|---|
-| ⚙️ Data Engineering | Pipelines PySpark, ingesta medallion, reconciliación core bancario, Jobs nocturnos | 105 min |
+| ⚙️ Data Engineering | Genie Code + datos `gold`; CSV real del core (`default/raw`) para medallión PySpark; enlaza con SDP | ~105 min |
 | 📊 BI & Analytics | SQL desde lenguaje natural, Metric Views (NPL/mora), Genie Spaces, dashboards de riesgo | 105 min |
 | 🧠 Data Science & ML | Scoring crediticio, MLflow, Model Serving, applyInPandas por región/segmento, alertas SARLAFT | 105 min |
 | 🛡️ Data Governance | DQ regulatorio, CLS/RLS para datos financieros, framework de auditoría, Data Academy | 105 min |
@@ -51,7 +51,7 @@ Estos pasos los ejecuta el facilitador **antes del workshop**. Tiempo estimado: 
 4. Abre el notebook `generate_workshop_data` que subiste en el Paso 1.
 5. En la esquina superior derecha, selecciona el cluster recién creado.
 6. Haz clic en **Run all** (▶▶) o `Shift + Enter` celda por celda.
-7. Al terminar, el output final debe mostrar:
+7. Al terminar, el output final debe mostrar las tablas en `workshop.gold` **y** la línea que confirma el CSV en `/Volumes/workshop/default/raw/transacciones_nuevas.csv` (export de `fact_transacciones` para el track Genie Data Engineering).
 
 ```
 ✅ workshop.gold.dim_clientes
@@ -59,7 +59,10 @@ Estos pasos los ejecuta el facilitador **antes del workshop**. Tiempo estimado: 
 ✅ workshop.gold.fact_transacciones
 ✅ workshop.gold.fact_cartera_creditos
 ✅ workshop.gold.fact_kpis_diarios
+✅ CSV exportado ... /Volumes/workshop/default/raw/transacciones_nuevas.csv
 ✅ Generación completa. Workshop listo.
+Genie Data Engineering: CSV del core en /Volumes/workshop/default/raw/transacciones_nuevas.csv
+Lakeflow SDP (sdp-workshop): JSON en /Volumes/workshop/sdp_landing/raw/
 ```
 
 > El notebook es idempotente — si algo falla, puedes ejecutarlo de nuevo sin problema.
@@ -162,7 +165,7 @@ databricks apps deploy genie-bg-workshop \
 
 Antes de que lleguen los participantes, confirma cada punto:
 
-- [ ] Las 5 tablas existen en `workshop.gold` con datos
+- [ ] Las 5 tablas existen en `workshop.gold` con datos y el CSV `/Volumes/workshop/default/raw/transacciones_nuevas.csv` existe (Genie DE paso 2)
 - [ ] Los participantes tienen permisos `SELECT` en `workshop.gold`
 - [ ] Foundation Model API responde con `200`
 - [ ] El botón ✨ Genie Code aparece en notebooks

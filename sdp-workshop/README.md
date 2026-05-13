@@ -2,6 +2,8 @@
 
 Todo el material del taller **Spark Declarative Pipelines** vive en esta carpeta del mismo repositorio que el workshop Banco Guayaquil / Genie Code.
 
+**Cómo encaja con Genie Code:** el track *Data Engineering* usa un **CSV** exportado desde `workshop.gold.fact_transacciones` (ruta `/Volumes/workshop/default/raw/transacciones_nuevas.csv`) para prototipar medallión en PySpark con Genie. Este módulo SDP usa **JSON** de pedidos/clientes en `/Volumes/workshop/sdp_landing/raw` — mismo catálogo, **dos historias de ingesta** (archivo plano “core” vs. Lakeflow declarativo).
+
 Diseño basado en el taller original [dbx-Workshop-Declarative-Pipelines](https://github.com/njimenezr/dbx-Workshop-Declarative-Pipelines), adaptado para **un solo catálogo Unity** (`workshop`) y permisos típicos de clientes corporativos.
 
 ## Por qué un solo catálogo

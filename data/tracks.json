@@ -4,7 +4,7 @@
       "id": "data-engineering",
       "title": "Data Engineering",
       "subtitle": "Acelera tus pipelines bancarios con Genie Code",
-      "description": "Usa Genie Code para generar pipelines PySpark para datos financieros, automatizar la ingesta de transacciones, reconciliar cartera entre sistemas, orquestar Jobs nocturnos, y construir Knowledge Assistants sobre la cartera — todo desde lenguaje natural.",
+      "description": "Un solo catálogo `workshop`: datos sintéticos bancarios listos en `gold`, CSV de “llegada del core” para medallión PySpark con Genie Code, y —en paralelo— Lakeflow SDP en `sdp-workshop/` con JSON de pedidos. Genie acelera prototipos; SDP formaliza pipelines declarativos.",
       "icon": "⚙️",
       "color": "#FF6D00",
       "estimatedMinutes": 105,
@@ -19,20 +19,23 @@
           "expectedOutput": "Una o más celdas que muestran las 5 tablas (dim_clientes, dim_sucursales, fact_transacciones, fact_cartera_creditos, fact_kpis_diarios) con sus schemas y datos de ejemplo.",
           "tips": [
             "Si Genie Code no responde, verifica que tienes un cluster activo asignado al notebook.",
-            "Si no ves las tablas, avisa al facilitador — necesitas permisos USE CATALOG y SELECT en workshop.gold."
+            "Si no ves las tablas, avisa al facilitador — necesitas permisos USE CATALOG y SELECT en workshop.gold.",
+            "El facilitador ejecutó `generate_workshop_data.py`: además de `gold.*`, existe un CSV en `/Volumes/workshop/default/raw/transacciones_nuevas.csv` (export de `fact_transacciones`) para el paso 2 de medallión.",
+            "El módulo Lakeflow SDP (`sdp-workshop/`) usa otra ruta (`sdp_landing/raw`) con JSON de pedidos — mismo banco ficticio, dos estilos de ingesta."
           ],
           "warningNote": null
         },
         {
           "id": "eng-step-2",
           "stepNumber": 2,
-          "title": "Pipeline medallion para ingesta de transacciones",
-          "description": "El equipo de pagos recibe un CSV diario del core bancario con transacciones nuevas. Usa Genie Code para generar el pipeline de ingesta completo siguiendo la arquitectura medallion.",
-          "prompt": "Genera un pipeline PySpark completo para ingestar transacciones financieras desde un CSV. El pipeline debe seguir la arquitectura medallion:\n\n1. **Bronze**: Lee el CSV desde /Volumes/workshop/raw/transacciones_nuevas.csv con schema inference. Guárdalo como tabla Delta en workshop.bronze.transacciones_raw con modo overwrite.\n\n2. **Silver**: Lee la tabla bronze. Aplica estas transformaciones:\n   - Elimina duplicados por transaction_id\n   - Filtra registros con amount <= 0 o NULL\n   - Convierte transaction_date a tipo DATE\n   - Estandariza transaction_type a Title Case\n   - Normaliza channel a mayúsculas\n   Guarda en workshop.silver.transacciones_clean\n\n3. **Gold**: Lee la tabla silver. Calcula por customer_id y mes:\n   - total_transactions: conteo de transacciones\n   - total_amount: suma de amount\n   - avg_ticket: promedio de amount\n   - top_channel: canal más frecuente (usa mode)\n   Guarda en workshop.gold.transacciones_mensual\n\nIncluye TBLPROPERTIES con 'layer', 'domain' = 'payments', y 'classification' = 'confidential' en cada tabla. Habilita Change Data Feed.",
-          "expectedOutput": "3 celdas de código PySpark, una por capa. Cada una con spark.read, transformaciones, y write con TBLPROPERTIES que incluyen la clasificación 'confidential' — requerida por política de datos bancarios.",
+          "title": "Pipeline medallion para ingesta de transacciones (CSV real del workshop)",
+          "description": "Simula el archivo diario del core: ese CSV ya fue generado a partir de `workshop.gold.fact_transacciones` (mismas columnas y defectos de calidad). Usa Genie Code para producir el código PySpark medallión; luego puedes ejecutarlo y comparar con la tabla gold original.",
+          "prompt": "Genera un pipeline PySpark completo para ingestar transacciones financieras desde un CSV. El pipeline debe seguir la arquitectura medallion:\n\n1. **Bronze**: Lee el CSV desde `/Volumes/workshop/default/raw/transacciones_nuevas.csv` con `spark.read.option('header', true).csv(...)` y schema inference. Guárdalo como tabla Delta en `workshop.bronze.transacciones_raw` con modo overwrite.\n\n2. **Silver**: Lee la tabla bronze. Aplica estas transformaciones:\n   - Elimina duplicados por transaction_id\n   - Filtra registros con amount <= 0 o NULL\n   - Convierte transaction_date a tipo DATE\n   - Estandariza transaction_type a Title Case\n   - Normaliza channel a mayúsculas\n   Guarda en `workshop.silver.transacciones_clean`.\n\n3. **Gold**: Lee la tabla silver. Calcula por customer_id y mes:\n   - total_transactions: conteo de transacciones\n   - total_amount: suma de amount\n   - avg_ticket: promedio de amount\n   - top_channel: canal más frecuente (usa mode)\n   Guarda en `workshop.gold.transacciones_mensual` (si ya existe, usa overwrite).\n\nIncluye TBLPROPERTIES con 'layer', 'domain' = 'payments', y 'classification' = 'confidential' en cada tabla. Habilita Change Data Feed.\n\nAl final, agrega una celda que compare conteos entre `workshop.gold.fact_transacciones` y `workshop.silver.transacciones_clean` (deberían ser muy cercanos salvo filtros de calidad).",
+          "expectedOutput": "3 celdas de código PySpark + comparación de conteos. El CSV existe tras el setup del facilitador; si falla la lectura, revisa permisos READ FILES sobre el volumen `workshop.default.raw`.",
           "tips": [
-            "Si el CSV no existe, Genie Code genera el código de todas formas. La lógica es lo que importa.",
-            "El campo 'classification' = 'confidential' en TBLPROPERTIES es la forma de etiquetar sensibilidad en Unity Catalog."
+            "Genie Code sirve para iterar rápido; el mismo flujo de negocio lo puedes implementar después como Lakeflow SDP declarativo (ver módulo `sdp-workshop/` en el repo).",
+            "El campo 'classification' = 'confidential' en TBLPROPERTIES etiqueta sensibilidad en Unity Catalog.",
+            "Si quieres experimentar más con Genie sin tocar tablas: pide variantes (partitioning, ZORDER, checks extra) sobre el mismo CSV."
           ],
           "warningNote": null
         },
@@ -45,7 +48,8 @@
           "expectedOutput": "Un notebook con 4 secciones: LEFT ANTI JOIN para inactivos, LEFT ANTI JOIN inverso para referencias rotas (~60 registros con IDs BGY-XX-*), INNER JOIN con métricas por cliente, y resumen final.",
           "tips": [
             "Este patrón es exactamente lo que necesitas para validar migraciones de core bancario a Databricks.",
-            "Las referencias rotas en datos financieros deben reportarse al equipo de compliance — impactan los reportes regulatorios."
+            "Las referencias rotas en datos financieros deben reportarse al equipo de compliance — impactan los reportes regulatorios.",
+            "La misma `fact_transacciones` alimentó el CSV del paso 2: si los números no cuadran, revisa filtros silver vs. fuente gold."
           ],
           "warningNote": null
         },
@@ -111,7 +115,8 @@
           "tips": [
             "1. ¿Qué pipeline de ingesta del core bancario podrías construir más rápido con Genie Code esta semana?",
             "2. ¿Qué 'skill' de Genie Code crearías para que tu equipo estandarice el logging de pipelines financieros?",
-            "3. Si pudieras automatizar UN proceso batch nocturno con Genie Code, ¿cuál sería?"
+            "3. Si pudieras automatizar UN proceso batch nocturno con Genie Code, ¿cuál sería?",
+            "4. ¿Qué parte del flujo dejarías en PySpark+Genie (prototipo) y cuál pasarías a Lakeflow SDP (`sdp-workshop/`) para gobierno y expectativas?"
           ],
           "warningNote": null
         }
@@ -128,6 +133,10 @@
         {
           "question": "No tengo acceso al catálogo workshop",
           "answer": "Avisa al facilitador. Necesitas permisos de USE CATALOG y SELECT en workshop.gold."
+        },
+        {
+          "question": "No encuentro el CSV del paso 2 (medallión transacciones)",
+          "answer": "El facilitador debe ejecutar `generate_workshop_data.py` hasta el final: crea `/Volumes/workshop/default/raw/transacciones_nuevas.csv` (export de `workshop.gold.fact_transacciones`) y los esquemas `workshop.bronze` y `workshop.silver`. Necesitas READ FILES sobre el volumen `workshop.default.raw`."
         },
         {
           "question": "El Foundation Model API no responde (Step 6)",
@@ -576,6 +585,7 @@
           "expectedOutput": "Ubicación clara: notebooks/, transformations/, exercises/, sql/GRANTS_single_catalog.sql y README del módulo.",
           "tips": [
             "Lee `sdp-workshop/README.md` antes de importar nada: explica por qué usamos `workshop.sdp_*` y no `workshop.gold`.",
+            "En paralelo, el track Genie *Data Engineering* usa un CSV exportado desde `fact_transacciones` en `/Volumes/workshop/default/raw/` — mismo catálogo, otra forma de ingesta.",
             "Origen histórico del contenido: https://github.com/njimenezr/dbx-Workshop-Declarative-Pipelines"
           ],
           "warningNote": null
