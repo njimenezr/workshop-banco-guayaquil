@@ -2,29 +2,29 @@
 
 Todo el material del taller **Spark Declarative Pipelines** vive en esta carpeta del mismo repositorio que el workshop Banco Guayaquil / Genie Code.
 
-**Cómo encaja con Genie Code:** el track *Data Engineering* usa un **CSV** exportado desde `workshop.gold.fact_transacciones` (ruta `/Volumes/workshop/default/raw/transacciones_nuevas.csv`) para prototipar medallión en PySpark con Genie. Este módulo SDP sigue siendo **independiente** (solo `read_files` sobre JSON), pero los JSON se generan desde el mismo notebook que el resto del workshop: **`workshop.gold.fact_pedidos_marketplace`** y **`dim_categoria_pedido_digital`** definen pedidos digitales con `customer_id` / `branch_id` reales; el generador escribe esas filas también en `/Volumes/workshop/sdp_landing/raw`. Así puedes hacer **JOIN** opcional entre `workshop.sdp_silver.*` y `workshop.gold.dim_clientes` sin que el pipeline SDP lea tablas `gold`.
+**Cómo encaja con Genie Code:** el track *Data Engineering* usa un **CSV** desde `fact_transacciones` y escribe el gold del camino Genie en **`workshop.gold.fact_transacciones_mensual_genie`**. El SDP ingiere **solo JSON** desde `/Volumes/workshop/sdp_landing/raw` (mismos `order_id` / `customer_id` que `fact_pedidos_marketplace`) y materializa en el **mismo esquema `workshop.gold`** tablas `sdp_stg_*`, **`fact_pedidos_agregado_diario_sdp`** y **`dim_cliente_digital_sdp`**. Puedes ejecutar **solo Genie** (sin pipeline), **solo SDP** (sin rellenar la fact Genie), o **ambos** y cruzar todo con SQL en `gold`.
 
 Diseño basado en el taller original [dbx-Workshop-Declarative-Pipelines](https://github.com/njimenezr/dbx-Workshop-Declarative-Pipelines), adaptado para **un solo catálogo Unity** (`workshop`) y permisos típicos de clientes corporativos.
 
-## Por qué un solo catálogo
+## Por qué un solo catálogo y un esquema analítico `gold`
 
 - Muchos usuarios **no tienen** `CREATE CATALOG`.
 - El catálogo `workshop` puede ser **creado una vez** por el administrador de la cuenta o landing zone.
-- Los datos del taller Genie siguen en **`workshop.gold`** (tablas `dim_*`, `fact_*`).
-- El taller SDP usa **otros esquemas** en el mismo catálogo para no pisar `gold`:
+- **`workshop.gold`** concentra:
+  - **Núcleo** del taller Genie: `dim_*` / `fact_*` bancarios.
+  - **Semilla marketplace** (común a ambos caminos): `dim_categoria_pedido_digital`, `fact_pedidos_marketplace`.
+  - **Plantilla camino Genie:** `fact_transacciones_mensual_genie` (0 filas hasta el paso 2 del track DE).
+  - **Camino SDP** (aparecen al ejecutar el pipeline): `sdp_stg_pedidos_raw`, `sdp_stg_pedidos_clean`, `fact_pedidos_agregado_diario_sdp`, `sdp_stg_clientes_raw`, `sdp_stg_clientes_clean`, `dim_cliente_digital_sdp`, `dim_resumen_cliente_digital_sdp`.
+- **`workshop.sdp_landing`** solo aloja el **volumen** `raw` y los JSON (no es la capa medallón declarativa).
 
 | Esquema | Uso |
 |---------|-----|
-| `workshop.sdp_landing` | Volumen `raw` y archivos JSON fuente |
-| `workshop.sdp_bronze` | Tablas streaming bronze del pipeline |
-| `workshop.sdp_silver` | Silver + tabla `customers` (SCD1) |
-| `workshop.sdp_gold` | Vistas materializadas gold |
-
-**Complemento en `workshop.gold` (no los lee el pipeline SDP):** `dim_categoria_pedido_digital` y `fact_pedidos_marketplace` describen el mismo universo de clientes/sucursales; el generador del workshop escribe el landing JSON a partir de esa fact. Así puedes cruzar `sdp_silver.orders_clean` con `dim_clientes` en un notebook aparte.
+| `workshop.sdp_landing` | Volumen `raw` + archivos JSON fuente del pipeline |
+| `workshop.gold` | Todo lo anterior (núcleo + extensiones Genie y SDP) |
 
 ## Orden de trabajo (participante)
 
-1. El facilitador ejecutó **`generate_workshop_data.py`** (tablas `gold`, CSV core, esquemas `sdp_*`, volumen y JSON en `sdp_landing`) y, si aplica, **`notebooks/00_SETUP_workshop_single_catalog.py`** (asegura carpetas; **no** sobrescribe JSON si ya existe `workshop.gold.fact_pedidos_marketplace`). Aplique **`sql/GRANTS_single_catalog.sql`** al grupo de asistentes.
+1. El facilitador ejecutó **`generate_workshop_data.py`** (tablas `gold`, CSV core, esquema `sdp_landing`, volumen y JSON) y, si aplica, **`notebooks/00_SETUP_workshop_single_catalog.py`**. Aplique **`sql/GRANTS_single_catalog.sql`** al grupo de asistentes.
 2. Sube esta carpeta `sdp-workshop/` al Workspace manteniendo rutas relativas (`transformations/`, `exercises/`).
 3. Crea un **Lakeflow Spark Declarative Pipeline** (editor multi-archivo) apuntando a `transformations/orders_pipeline.sql` (y luego añade `customers_pipeline.sql` en el ejercicio 2).
 4. En **Pipeline settings → Configuration** define la clave **`source`** con el valor impreso por el setup, normalmente  
@@ -47,20 +47,20 @@ Diseño basado en el taller original [dbx-Workshop-Declarative-Pipelines](https:
 
 | Enfoque | Cuándo usarlo | Riesgo |
 |---------|----------------|--------|
-| **Tablas compartidas** (este repo) | Demo / taller guiado; todos leen el mismo volumen y el mismo pipeline escribe en `workshop.sdp_*` | Si dos personas ejecutan **Full refresh** a la vez o regeneran datos en el volumen, pueden pisarse resultados. Coordinar turnos o un solo pipeline de demostración. |
-| **Un pipeline por equipo** | Equipos con permiso `CREATE PIPELINE` y mismo catálogo | Misma tabla destino: seguirías con conflicto. Mejor **un pipeline compartido** de demo + ejercicios en lectura. |
-| **Prefijo por equipo** (avanzado) | Cliente exige aislamiento sin nuevos catálogos | Duplicar esquemas `sdp_bronze_teamA` vía parámetro y plantillas SQL; más mantenimiento. |
+| **Tablas compartidas** (este repo) | Demo / taller guiado; todos leen el mismo volumen y el mismo pipeline escribe tablas `*_sdp` en `workshop.gold` | Si dos personas ejecutan **Full refresh** a la vez o regeneran datos en el volumen, pueden pisarse resultados. Coordinar turnos o un solo pipeline de demostración. |
+| **Un pipeline por equipo** | Equipos con permiso `CREATE PIPELINE` y mismo catálogo | Misma tabla destino en `gold`: conflicto. Mejor **un pipeline compartido** de demo + ejercicios en lectura. |
+| **Prefijo por equipo** (avanzado) | Cliente exige aislamiento sin nuevos catálogos | Duplicar nombres de tabla vía parámetro en las SQL del pipeline; más mantenimiento. |
 | **Ramificación / entorno dev** | Producción real | Usar catálogos `workshop_dev` / `workshop_prod` solo si el negocio los aprueba (sigue siendo “pocos catálogos”, no uno por persona). |
 
-**Recomendación práctica para salas de taller:** un grupo `workshop_sdp_participants` con `SELECT` sobre `workshop.gold` (Genie) y `USAGE` + `SELECT` + `MODIFY` sobre los esquemas `sdp_*` **solo** si todos comparten el mismo laboratorio; el facilitador ejecuta el pipeline de referencia y los alumnos observan / repiten en **workspace de práctica** propio si la cuenta lo permite.
+**Recomendación práctica para salas de taller:** un grupo `workshop_sdp_participants` con `SELECT` (y según política `MODIFY`) sobre **`workshop.gold`** y `READ`/`WRITE` **FILES** sobre el volumen `sdp_landing.raw`. El facilitador suele ser dueño del pipeline de referencia.
 
 ## Permisos mínimos (resumen)
 
-- Participante: `USE CATALOG workshop`, `USAGE` + `SELECT` (y si aplica `READ FILES`) sobre el volumen `sdp_landing.raw`, `SELECT`/`MODIFY` en `sdp_*` según política (ver SQL de grants).
-- Facilitador: además `CREATE SCHEMA`, `CREATE VOLUME`, `CREATE TABLE` o ownership del pipeline.
+- Participante: `USE CATALOG workshop`, `USAGE` + `SELECT` en `workshop.gold`, `USAGE` + `READ FILES` (y si aplica `WRITE FILES`) sobre `sdp_landing.raw`.
+- Facilitador: además `CREATE SCHEMA`, `CREATE VOLUME`, permisos para crear/actualizar el pipeline y tablas en `gold`.
 
 ## Troubleshooting rápido
 
 - **`Variable source not found`:** añade `source` = `/Volumes/workshop/sdp_landing/raw` en la configuración del pipeline.
 - **`Permission denied` en volumen:** revisa `GRANT READ FILES` / `USAGE` sobre el volumen UC.
-- **Confusión con `workshop.gold`:** las tablas del taller Genie no se modifican; SDP solo escribe en `sdp_*`.
+- **Convivencia en `gold`:** el pipeline solo crea/actualiza tablas con prefijos `sdp_stg_`, sufijos `_sdp` o nombres explícitos en las SQL del repo; no altera `dim_clientes` ni `fact_transacciones` del núcleo.

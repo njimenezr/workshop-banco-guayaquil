@@ -7,9 +7,8 @@
 GRANT USE CATALOG ON CATALOG workshop TO `workshop_sdp_participants`;
 
 GRANT USAGE ON SCHEMA workshop.sdp_landing TO `workshop_sdp_participants`;
-GRANT USAGE ON SCHEMA workshop.sdp_bronze TO `workshop_sdp_participants`;
-GRANT USAGE ON SCHEMA workshop.sdp_silver TO `workshop_sdp_participants`;
-GRANT USAGE ON SCHEMA workshop.sdp_gold TO `workshop_sdp_participants`;
+-- Salidas del pipeline SDP viven en workshop.gold (sdp_stg_*, fact_*_sdp, dim_*_sdp).
+-- Suele bastar con GRANT SELECT ON SCHEMA workshop.gold si el grupo ya lee el workshop completo.
 
 -- Taller Genie (mismo grupo)
 GRANT USAGE ON SCHEMA workshop.gold TO `workshop_sdp_participants`;
@@ -19,6 +18,5 @@ GRANT SELECT ON ALL TABLES IN SCHEMA workshop.gold TO `workshop_sdp_participants
 GRANT READ FILES ON VOLUME workshop.sdp_landing.raw TO `workshop_sdp_participants`;
 GRANT WRITE FILES ON VOLUME workshop.sdp_landing.raw TO `workshop_sdp_participants`;
 
--- Si el pipeline corre con identidad del participante y crea tablas en sdp_*:
--- GRANT CREATE TABLE ON SCHEMA workshop.sdp_bronze TO `workshop_sdp_participants`;
--- (Muchos equipos prefieren un único service principal dueño del pipeline y solo SELECT para alumnos.)
+-- Si el pipeline corre con identidad del participante y crea tablas en gold:
+-- GRANT CREATE TABLE, MODIFY ON SCHEMA workshop.gold ... (según política)

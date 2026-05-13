@@ -2,12 +2,11 @@
 # MAGIC %md
 # MAGIC # Setup — Lakeflow SDP (catálogo único `workshop`)
 # MAGIC
-# MAGIC **No crea catálogo nuevo.** Usa el catálogo compartido `workshop` y esquemas dedicados `sdp_*` para no chocar con `workshop.gold` del taller Genie.
+# MAGIC **No crea catálogo nuevo.** Usa `workshop.sdp_landing` solo para **archivos** (volumen `raw`). Las tablas del pipeline SDP se materializan en **`workshop.gold`** con prefijos `sdp_stg_*`, `fact_*_sdp` y `dim_*_sdp` (ver `transformations/*.sql`).
 # MAGIC
 # MAGIC Crea:
-# MAGIC - Esquemas `workshop.sdp_landing`, `workshop.sdp_bronze`, `workshop.sdp_silver`, `workshop.sdp_gold`
-# MAGIC - Volumen `workshop.sdp_landing.raw` y carpetas `orders/`, `status/`, `customers/`
-# MAGIC - JSON de ejemplo (pedidos, estatus, CDC clientes)
+# MAGIC - Esquema `workshop.sdp_landing` y volumen `raw` con carpetas `orders/`, `status/`, `customers/`
+# MAGIC - JSON de ejemplo **solo si** aún no existe `workshop.gold.fact_pedidos_marketplace` (modo demo aislado)
 # MAGIC
 # MAGIC **Quién ejecuta:** un usuario con `CREATE SCHEMA` y `CREATE VOLUME` sobre `workshop` (facilitador o cuenta de servicio). Los participantes no necesitan `CREATE CATALOG`.
 # MAGIC
@@ -25,14 +24,13 @@
 CATALOG = "workshop"
 LANDING_SCHEMA = "sdp_landing"
 VOLUME_NAME = "raw"
-BRONZE = "sdp_bronze"
-SILVER = "sdp_silver"
-GOLD = "sdp_gold"
+GOLD_SCHEMA = "gold"
 
 WORKING_DIR = f"/Volumes/{CATALOG}/{LANDING_SCHEMA}/{VOLUME_NAME}"
 
 print(f"Catálogo: {CATALOG}")
 print(f"Ruta fuente (variable pipeline `source`): {WORKING_DIR}")
+print(f"Salidas SDP (Lakeflow): esquema {CATALOG}.{GOLD_SCHEMA} — tablas sdp_stg_*, fact_pedidos_agregado_diario_sdp, dim_cliente_digital_sdp, …")
 
 # COMMAND ----------
 
@@ -41,9 +39,10 @@ print(f"Ruta fuente (variable pipeline `source`): {WORKING_DIR}")
 
 # COMMAND ----------
 
-for s in (LANDING_SCHEMA, BRONZE, SILVER, GOLD):
-    spark.sql(f"CREATE SCHEMA IF NOT EXISTS {CATALOG}.{s}")
-    print(f"✓ Esquema {CATALOG}.{s}")
+spark.sql(f"CREATE SCHEMA IF NOT EXISTS {CATALOG}.{LANDING_SCHEMA}")
+print(f"✓ Esquema {CATALOG}.{LANDING_SCHEMA}")
+spark.sql(f"CREATE SCHEMA IF NOT EXISTS {CATALOG}.{GOLD_SCHEMA}")
+print(f"✓ Esquema {CATALOG}.{GOLD_SCHEMA} (destino tablas SDP)")
 
 spark.sql(f"CREATE VOLUME IF NOT EXISTS {CATALOG}.{LANDING_SCHEMA}.{VOLUME_NAME}")
 print(f"✓ Volumen {CATALOG}.{LANDING_SCHEMA}.{VOLUME_NAME}")
@@ -172,15 +171,14 @@ print(
 Configuración lista (catálogo único compartido)
 ================================================================================
 1. Catálogo predeterminado del pipeline: {CATALOG}
-2. Esquema predeterminado (UI): {BRONZE}   (opcional si todo está cualificado)
+2. Esquema predeterminado del pipeline (UI, opcional): {GOLD_SCHEMA}
 3. Variable de configuración del pipeline:
      Clave: source
      Valor: {WORKING_DIR}
 
-Tablas esperadas (tras ejecutar el pipeline):
-  - {CATALOG}.{BRONZE}.orders, customers_raw, customers_clean
-  - {CATALOG}.{SILVER}.orders_clean, customers
-  - {CATALOG}.{GOLD}.order_summary, customer_summary
+Tablas esperadas en {CATALOG}.{GOLD_SCHEMA} (tras ejecutar el pipeline):
+  - sdp_stg_pedidos_raw, sdp_stg_pedidos_clean, fact_pedidos_agregado_diario_sdp
+  - sdp_stg_clientes_raw, sdp_stg_clientes_clean, dim_cliente_digital_sdp, dim_resumen_cliente_digital_sdp
 
 Siguiente paso: importa `sdp-workshop/transformations/*.sql` al editor multi-archivo del pipeline
 y abre los notebooks en `sdp-workshop/exercises/`.

@@ -1,9 +1,9 @@
 -------------------------------------------------------
--- PIPELINE DE CLIENTES (AUTO CDC) — catálogo único `workshop`
+-- PIPELINE DE CLIENTES (AUTO CDC) — esquema `workshop.gold`
 -------------------------------------------------------
 
-CREATE OR REFRESH STREAMING TABLE workshop.sdp_bronze.customers_raw
-  COMMENT "Eventos CDC raw para datos de clientes"
+CREATE OR REFRESH STREAMING TABLE workshop.gold.sdp_stg_clientes_raw
+  COMMENT "Bronze SDP: eventos CDC clientes marketplace (read_files)"
   TBLPROPERTIES (
     "quality" = "bronze",
     "pipelines.reset.allowed" = false
@@ -20,7 +20,7 @@ FROM STREAM read_files(
 
 -------------------------------------------------------
 
-CREATE OR REFRESH STREAMING TABLE workshop.sdp_bronze.customers_clean
+CREATE OR REFRESH STREAMING TABLE workshop.gold.sdp_stg_clientes_clean
   (
     CONSTRAINT valid_id EXPECT (customer_id IS NOT NULL) ON VIOLATION FAIL UPDATE,
     CONSTRAINT valid_operation EXPECT (operation IS NOT NULL) ON VIOLATION DROP ROW,
@@ -34,22 +34,22 @@ CREATE OR REFRESH STREAMING TABLE workshop.sdp_bronze.customers_clean
       operation = 'DELETE'
     ) ON VIOLATION DROP ROW
   )
-  COMMENT "Eventos CDC validados listos para procesamiento"
-  TBLPROPERTIES ("quality" = "bronze")
+  COMMENT "Silver SDP: CDC validado"
+  TBLPROPERTIES ("quality" = "silver")
 AS
 SELECT
   *,
   CAST(from_unixtime(timestamp) AS timestamp) AS timestamp_datetime
-FROM STREAM workshop.sdp_bronze.customers_raw;
+FROM STREAM workshop.gold.sdp_stg_clientes_raw;
 
 -------------------------------------------------------
 
-CREATE OR REFRESH STREAMING TABLE workshop.sdp_silver.customers
-  COMMENT "Estado actual de clientes (SCD Tipo 1)";
+CREATE OR REFRESH STREAMING TABLE workshop.gold.dim_cliente_digital_sdp
+  COMMENT "Dimensión SDP: estado actual cliente marketplace (SCD1)";
 
 CREATE FLOW customers_cdc_flow AS
-AUTO CDC INTO workshop.sdp_silver.customers
-FROM STREAM workshop.sdp_bronze.customers_clean
+AUTO CDC INTO workshop.gold.dim_cliente_digital_sdp
+FROM STREAM workshop.gold.sdp_stg_clientes_clean
   KEYS (customer_id)
   APPLY AS DELETE WHEN operation = 'DELETE'
   SEQUENCE BY timestamp_datetime
@@ -58,9 +58,9 @@ FROM STREAM workshop.sdp_bronze.customers_clean
 
 -------------------------------------------------------
 
-CREATE OR REFRESH MATERIALIZED VIEW workshop.sdp_gold.customer_summary
-  COMMENT "Resumen de clientes con métricas derivadas"
-  TBLPROPERTIES ("quality" = "gold")
+CREATE OR REFRESH MATERIALIZED VIEW workshop.gold.dim_resumen_cliente_digital_sdp
+  COMMENT "Vista analítica SDP derivada del perfil digital (marketplace)"
+  TBLPROPERTIES ("quality" = "gold", "domain" = "marketplace", "source" = "sdp")
 AS
 SELECT
   customer_id,
@@ -68,4 +68,4 @@ SELECT
   state,
   city,
   current_timestamp() AS last_refreshed
-FROM workshop.sdp_silver.customers;
+FROM workshop.gold.dim_cliente_digital_sdp;

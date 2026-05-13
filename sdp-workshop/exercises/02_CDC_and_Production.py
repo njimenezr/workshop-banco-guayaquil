@@ -224,8 +224,8 @@
 # MAGIC
 # MAGIC ### Paso 2: Observar CDC
 # MAGIC
-# MAGIC - **workshop.sdp_bronze.customers_raw**: 27 registros (20 INSERT + 5 UPDATE + 2 DELETE)
-# MAGIC - **workshop.sdp_bronze.customers_clean**: 27 registros (validados)
+# MAGIC - **workshop.gold.sdp_stg_clientes_raw**: 27 registros (20 INSERT + 5 UPDATE + 2 DELETE)
+# MAGIC - **workshop.gold.sdp_stg_clientes_clean**: 27 registros (validados)
 # MAGIC - **silver.customers**: **18 registros** (estado actual)
 # MAGIC   - 20 inserts iniciales
 # MAGIC   - 5 actualizaciones (mismo conteo, valores cambiados)
@@ -240,7 +240,7 @@
 # MAGIC
 # MAGIC ### Paso 4: Métricas de calidad de datos
 # MAGIC
-# MAGIC - En **workshop.sdp_bronze.customers_clean** > pestaña **Table metrics**
+# MAGIC - En **workshop.gold.sdp_stg_clientes_clean** > pestaña **Table metrics**
 # MAGIC - Verifica que todos los constraints pasaron:
 # MAGIC   - valid_id: 27
 # MAGIC   - valid_operation: 27
@@ -273,7 +273,7 @@
 
 # MAGIC %sql
 # MAGIC -- Ver estado actual final
-# MAGIC SELECT * FROM workshop.sdp_silver.customers ORDER BY customer_id;
+# MAGIC SELECT * FROM workshop.gold.dim_cliente_digital_sdp ORDER BY customer_id;
 
 # COMMAND ----------
 
@@ -281,22 +281,22 @@
 # MAGIC -- Verificar conteos
 # MAGIC SELECT 
 # MAGIC   'customers_raw' AS table_name, COUNT(*) AS row_count 
-# MAGIC FROM workshop.sdp_bronze.customers_raw
+# MAGIC FROM workshop.gold.sdp_stg_clientes_raw
 # MAGIC UNION ALL
 # MAGIC SELECT 
 # MAGIC   'customers_clean' AS table_name, COUNT(*) AS row_count 
-# MAGIC FROM workshop.sdp_bronze.customers_clean
+# MAGIC FROM workshop.gold.sdp_stg_clientes_clean
 # MAGIC UNION ALL
 # MAGIC SELECT 
 # MAGIC   'customers (current)' AS table_name, COUNT(*) AS row_count 
-# MAGIC FROM workshop.sdp_silver.customers;
+# MAGIC FROM workshop.gold.dim_cliente_digital_sdp;
 
 # COMMAND ----------
 
 # MAGIC %sql
 # MAGIC -- Clientes actualizados (con ciudad SF)
 # MAGIC SELECT customer_id, name, email, city, state
-# MAGIC FROM workshop.sdp_silver.customers
+# MAGIC FROM workshop.gold.dim_cliente_digital_sdp
 # MAGIC WHERE city = 'San Francisco'
 # MAGIC ORDER BY customer_id;
 
@@ -305,11 +305,11 @@
 # MAGIC %sql
 # MAGIC -- Verificar que eliminados no existan
 # MAGIC SELECT customer_id 
-# MAGIC FROM workshop.sdp_bronze.customers_raw
+# MAGIC FROM workshop.gold.sdp_stg_clientes_raw
 # MAGIC WHERE operation = 'DELETE'
 # MAGIC EXCEPT
 # MAGIC SELECT customer_id
-# MAGIC FROM workshop.sdp_silver.customers;
+# MAGIC FROM workshop.gold.dim_cliente_digital_sdp;
 # MAGIC -- Debe devolver IDs eliminados (CUST0003, CUST0007)
 
 # COMMAND ----------

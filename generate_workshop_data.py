@@ -641,17 +641,37 @@ df_mkt = pd.DataFrame(mkt_rows)
 spark.createDataFrame(df_mkt).write.mode("overwrite").saveAsTable(f"{CATALOG}.{SCHEMA}.fact_pedidos_marketplace")
 print(f"✅ {CATALOG}.{SCHEMA}.fact_pedidos_marketplace ({len(df_mkt):,} filas) — FKs a dim_clientes, dim_sucursales, dim_categoria_pedido_digital")
 
+# Tabla gold del camino Genie (medallión CSV): vacía hasta que el participante ejecute el paso 2 del track DE
+from pyspark.sql.types import DoubleType, LongType, StringType, StructField, StructType
+
+_ftg = f"{CATALOG}.{SCHEMA}.fact_transacciones_mensual_genie"
+_ftg_schema = StructType(
+    [
+        StructField("customer_id", StringType(), True),
+        StructField("year_month", StringType(), True),
+        StructField("total_transactions", LongType(), True),
+        StructField("total_amount", DoubleType(), True),
+        StructField("avg_ticket", DoubleType(), True),
+        StructField("top_channel", StringType(), True),
+    ]
+)
+if not spark.catalog.tableExists(_ftg):
+    spark.createDataFrame([], _ftg_schema).write.saveAsTable(_ftg)
+    print(f"✅ {_ftg} creada (0 filas) — relleno por el camino Genie Code (paso 2)")
+else:
+    print(f"✓ {_ftg} ya existe — no se sobrescribe (puede contener datos del taller)")
+
 # COMMAND ----------
 
 # MAGIC %md
 # MAGIC ## Landing SDP (JSON alineado — taller SDP sigue independiente)
 # MAGIC
-# MAGIC Crea `workshop.sdp_landing.raw` si hace falta y escribe `orders/`, `status/`, `customers/` con **mismos** `customer_id` (BGY-…) y `order_id` (ORD…) que `fact_pedidos_marketplace`. El pipeline SDP **no** lee tablas `gold`; la relación es por diseño de datos y por `JOIN` opcional en notebooks de análisis.
+# MAGIC Crea `workshop.sdp_landing.raw` si hace falta y escribe `orders/`, `status/`, `customers/` con **mismos** `customer_id` (BGY-…) y `order_id` (ORD…) que `fact_pedidos_marketplace`. El pipeline SDP **solo** lee archivos; materializa en **`workshop.gold`** tablas `sdp_stg_*`, `fact_pedidos_agregado_diario_sdp` y `dim_*_sdp` (ver `transformations/*.sql`).
 
 # COMMAND ----------
 
 try:
-    for _sdp in ("sdp_landing", "sdp_bronze", "sdp_silver", "sdp_gold"):
+    for _sdp in ("sdp_landing",):
         spark.sql(f"CREATE SCHEMA IF NOT EXISTS {CATALOG}.{_sdp}")
         print(f"✅ Esquema {CATALOG}.{_sdp}")
     spark.sql(f"CREATE VOLUME IF NOT EXISTS {CATALOG}.sdp_landing.raw")
@@ -838,9 +858,12 @@ for t in tables:
     count = spark.sql(f"SELECT COUNT(*) as cnt FROM {CATALOG}.{SCHEMA}.{t}").collect()[0]["cnt"]
     print(f"  {CATALOG}.{SCHEMA}.{t}: {count:,} filas")
 
+_ftg_cnt = spark.sql(f"SELECT COUNT(*) as cnt FROM {CATALOG}.{SCHEMA}.fact_transacciones_mensual_genie").collect()[0]["cnt"]
+print(f"  {CATALOG}.{SCHEMA}.fact_transacciones_mensual_genie: {_ftg_cnt:,} filas (camino Genie; 0 hasta ejecutar paso 2)")
 print()
-print("Complemento marketplace (sin defectos DQ intencionados):")
-print("  dim_categoria_pedido_digital + fact_pedidos_marketplace — FKs a clientes/sucursales/categorías; JSON SDP alineado.")
+print("Complemento marketplace + caminos paralelos:")
+print("  dim_categoria_pedido_digital, fact_pedidos_marketplace — semilla alineada con JSON en sdp_landing.")
+print("  Tras ejecutar el pipeline SDP: tablas sdp_stg_*, fact_pedidos_agregado_diario_sdp, dim_cliente_digital_sdp en el mismo esquema gold.")
 print()
 print("Defectos DQ inyectados:")
 print("  dim_clientes:         10 null country, 6 fechas futuras, 5 IDs dup, 15 segment minúsculas, 18 scores inválidos")

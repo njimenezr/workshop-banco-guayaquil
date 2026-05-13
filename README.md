@@ -18,7 +18,7 @@ Workshop práctico de Databricks Genie Code adaptado para **Banco Guayaquil**. C
 
 ## Módulo Spark Declarative Pipelines (SDP)
 
-- **Código y notebooks:** carpeta [`sdp-workshop/`](sdp-workshop/README.md) en **este** repositorio (catálogo único `workshop`, esquemas `sdp_*`).
+- **Código y notebooks:** carpeta [`sdp-workshop/`](sdp-workshop/README.md) en **este** repositorio (catálogo único `workshop`; salidas SDP en **`gold`**, JSON en **`sdp_landing`**).
 - **Guía del participante en la app:** track `sdp-lakeflow-workshop-repositorio` (pestaña SDP).
 - **Origen pedagógico:** [dbx-Workshop-Declarative-Pipelines](https://github.com/njimenezr/dbx-Workshop-Declarative-Pipelines) (histórico; el taller operativo está consolidado en `sdp-workshop/`).
 
@@ -51,7 +51,7 @@ Estos pasos los ejecuta el facilitador **antes del workshop**. Tiempo estimado: 
 4. Abre el notebook `generate_workshop_data` que subiste en el Paso 1.
 5. En la esquina superior derecha, selecciona el cluster recién creado.
 6. Haz clic en **Run all** (▶▶) o `Shift + Enter` celda por celda.
-7. Al terminar, el output final debe mostrar las tablas en `workshop.gold` (incluidas las de **marketplace digital** complementarias al SDP), **y** las líneas que confirman el CSV en `/Volumes/workshop/default/raw/transacciones_nuevas.csv` y el JSON SDP en `/Volumes/workshop/sdp_landing/raw/` (mismos `order_id` / `customer_id` que `fact_pedidos_marketplace`).
+7. Al terminar, el output final debe mostrar las tablas en `workshop.gold` (núcleo + marketplace + plantilla `fact_transacciones_mensual_genie`), **y** las líneas que confirman el CSV en `/Volumes/workshop/default/raw/transacciones_nuevas.csv` y el JSON SDP en `/Volumes/workshop/sdp_landing/raw/` (mismos `order_id` / `customer_id` que `fact_pedidos_marketplace`).
 
 ```
 ✅ workshop.gold.dim_clientes
@@ -61,11 +61,12 @@ Estos pasos los ejecuta el facilitador **antes del workshop**. Tiempo estimado: 
 ✅ workshop.gold.fact_kpis_diarios
 ✅ workshop.gold.dim_categoria_pedido_digital
 ✅ workshop.gold.fact_pedidos_marketplace
+✅ workshop.gold.fact_transacciones_mensual_genie (0 filas hasta paso Genie)
 ✅ SDP landing JSON alineado con gold: /Volumes/workshop/sdp_landing/raw/
 ✅ CSV exportado ... /Volumes/workshop/default/raw/transacciones_nuevas.csv
 ✅ Generación completa. Workshop listo.
 Genie Data Engineering: CSV del core en /Volumes/workshop/default/raw/transacciones_nuevas.csv
-Lakeflow SDP (sdp-workshop): JSON en /Volumes/workshop/sdp_landing/raw/ (alineado con fact_pedidos_marketplace)
+Lakeflow SDP (sdp-workshop): JSON en /Volumes/workshop/sdp_landing/raw/ (alineado con fact_pedidos_marketplace); al ejecutar el pipeline aparecen tablas `sdp_stg_*` y `*_sdp` en el mismo esquema gold
 ```
 
 > El notebook es idempotente — si algo falla, puedes ejecutarlo de nuevo sin problema.
@@ -76,7 +77,7 @@ Lakeflow SDP (sdp-workshop): JSON en /Volumes/workshop/sdp_landing/raw/ (alinead
 
 1. En la barra lateral, haz clic en **Catalog** (ícono de catálogo).
 2. Navega a **workshop** → **gold**.
-3. Confirma que existen **7 tablas** en `gold` y tienen datos:
+3. Confirma que existen **al menos 8 tablas** en `gold` con las filas esperadas (la tabla `fact_transacciones_mensual_genie` puede tener **0 filas** hasta el paso 2 del track DE). Si ya se ejecutó el pipeline SDP, verás también tablas `sdp_stg_*` y `*_sdp`.
    - `dim_clientes` (~2,500 filas)
    - `dim_sucursales` (~136 filas)
    - `fact_transacciones` (~200K filas)
@@ -84,6 +85,7 @@ Lakeflow SDP (sdp-workshop): JSON en /Volumes/workshop/sdp_landing/raw/ (alinead
    - `fact_kpis_diarios` (~4,000 filas)
    - `dim_categoria_pedido_digital` (8 filas — categorías marketplace)
    - `fact_pedidos_marketplace` (~174 filas — pedidos digitales enlazados a clientes/sucursales; fuente lógica del JSON SDP)
+   - `fact_transacciones_mensual_genie` (plantilla camino Genie; 0 filas hasta ejecutar el pipeline PySpark del paso 2)
 
 ---
 
@@ -170,7 +172,7 @@ databricks apps deploy genie-bg-workshop \
 
 Antes de que lleguen los participantes, confirma cada punto:
 
-- [ ] Las **7 tablas** existen en `workshop.gold` con datos, el CSV `/Volumes/workshop/default/raw/transacciones_nuevas.csv` existe (Genie DE paso 2) y el JSON SDP está en `/Volumes/workshop/sdp_landing/raw/` (tras `generate_workshop_data.py`, alineado con `fact_pedidos_marketplace`)
+- [ ] En `workshop.gold` están el núcleo + marketplace + `fact_transacciones_mensual_genie` (puede estar vacía), el CSV `/Volumes/workshop/default/raw/transacciones_nuevas.csv` existe (Genie DE paso 2) y el JSON SDP está en `/Volumes/workshop/sdp_landing/raw/` (tras `generate_workshop_data.py`). Opcional: tablas `sdp_stg_*` / `*_sdp` tras ejecutar el pipeline.
 - [ ] Los participantes tienen permisos `SELECT` en `workshop.gold`
 - [ ] Foundation Model API responde con `200`
 - [ ] El botón ✨ Genie Code aparece en notebooks
@@ -200,8 +202,8 @@ genie-bg-workshop/
 ├── app.yaml                    # Configuración Databricks Apps
 ├── main.py                     # Backend FastAPI
 ├── requirements.txt            # Dependencias Python
-├── generate_workshop_data.py   # Genera gold (núcleo + marketplace), CSV core, esquemas sdp_* y JSON sdp_landing (ejecutar una vez)
-├── sdp-workshop/               # Taller Lakeflow SDP (mismo catálogo workshop, esquemas sdp_*)
+├── generate_workshop_data.py   # Genera gold (núcleo + marketplace + plantilla Genie), CSV core, esquema sdp_landing + JSON (ejecutar una vez)
+├── sdp-workshop/               # Taller Lakeflow SDP (mismo catálogo; salidas del pipeline en workshop.gold)
 │   ├── README.md
 │   ├── notebooks/00_SETUP_workshop_single_catalog.py
 │   ├── transformations/*.sql
@@ -243,4 +245,4 @@ La columna `country_code` conserva el nombre por compatibilidad con el esquema d
 - Las tablas incluyen ~382 defectos de calidad intencionados para el track de Governance.
 - El track de Data Science requiere ML Runtime en el cluster (para XGBoost y MLflow).
 - Los steps que usan Foundation Model API tienen una advertencia visible en la app — ten un notebook de respaldo con el output esperado por si el endpoint no responde.
-- El módulo **SDP** comparte el catálogo `workshop` pero escribe solo en esquemas `sdp_*` (ver `sdp-workshop/README.md`); el setup SDP no debe borrar `workshop.gold`.
+- El módulo **SDP** comparte el catálogo `workshop` y materializa tablas en **`workshop.gold`** con nombres `sdp_stg_*`, `fact_*_sdp`, `dim_*_sdp` (ver `sdp-workshop/README.md`); los JSON solo van a `sdp_landing`. El setup no debe borrar tablas del núcleo en `gold`.

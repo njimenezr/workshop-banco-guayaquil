@@ -331,7 +331,7 @@ Formatea todo como tablas legibles.","expectedOutput":"Una o más celdas que mue
    - total_amount: suma de amount
    - avg_ticket: promedio de amount
    - top_channel: canal más frecuente (usa mode)
-   Guarda en workshop.gold.transacciones_mensual
+   Guarda en workshop.gold.fact_transacciones_mensual_genie
 
 Incluye TBLPROPERTIES con 'layer', 'domain' = 'payments', y 'classification' = 'confidential' en cada tabla. Habilita Change Data Feed.","expectedOutput":"3 celdas de código PySpark, una por capa. Cada una con spark.read, transformaciones, y write con TBLPROPERTIES que incluyen la clasificación 'confidential' — requerida por política de datos bancarios.","tips":["Si el CSV no existe, Genie Code genera el código de todas formas. La lógica es lo que importa.","El campo 'classification' = 'confidential' en TBLPROPERTIES es la forma de etiquetar sensibilidad en Unity Catalog."],"warningNote":null},{"id":"eng-step-3","stepNumber":3,"title":"Reconcilia core bancario vs. DWH","description":"Uno de los retos más comunes en banca es validar que los datos del core bancario llegaron completos al DWH. Usa Genie Code para generar el código de reconciliación.","prompt":"Escribe un notebook PySpark que reconcilie datos entre workshop.gold.dim_clientes y workshop.gold.fact_transacciones.
 

@@ -4,7 +4,7 @@
       "id": "data-engineering",
       "title": "Data Engineering",
       "subtitle": "Acelera tus pipelines bancarios con Genie Code",
-      "description": "Un solo catálogo `workshop`: datos sintéticos bancarios listos en `gold`, CSV de “llegada del core” para medallión PySpark con Genie Code, y —en paralelo— Lakeflow SDP en `sdp-workshop/` con JSON de pedidos. Genie acelera prototipos; SDP formaliza pipelines declarativos.",
+      "description": "Un solo catálogo `workshop` y un esquema analítico `gold`: núcleo bancario, marketplace de semilla, plantilla `fact_transacciones_mensual_genie` (Genie) y —si corres el pipeline SDP— tablas `sdp_stg_*` y `*_sdp` declarativas; el CSV del core y el JSON de pedidos alimentan cada camino por separado o juntos.",
       "icon": "⚙️",
       "color": "#FF6D00",
       "estimatedMinutes": 105,
@@ -16,12 +16,12 @@
           "title": "Explora tu landscape de datos",
           "description": "Abre un notebook nuevo y activa Genie Code (botón ✨ arriba a la derecha). Usa el siguiente prompt para explorar las tablas del workshop.",
           "prompt": "Muéstrame todas las tablas disponibles en el catálogo workshop, schema gold. Para cada tabla muéstrame:\n1. Nombre de la tabla\n2. Número de filas\n3. Lista de columnas con sus tipos de datos\n4. 3 filas de ejemplo\n\nFormatea todo como tablas legibles.",
-          "expectedOutput": "Una o más celdas que muestran las tablas en `workshop.gold`: las 5 del núcleo bancario (dim_clientes, dim_sucursales, fact_transacciones, fact_cartera_creditos, fact_kpis_diarios) y las 2 complementarias marketplace (dim_categoria_pedido_digital, fact_pedidos_marketplace), con schemas y datos de ejemplo.",
+          "expectedOutput": "Una o más celdas que muestran las tablas en `workshop.gold`: las 5 del núcleo bancario, `dim_categoria_pedido_digital`, `fact_pedidos_marketplace`, la plantilla vacía `fact_transacciones_mensual_genie` (camino Genie), y —si el facilitador ya ejecutó el pipeline SDP— tablas adicionales `sdp_stg_*`, `fact_pedidos_agregado_diario_sdp`, `dim_*_sdp`.",
           "tips": [
             "Si Genie Code no responde, verifica que tienes un cluster activo asignado al notebook.",
             "Si no ves las tablas, avisa al facilitador — necesitas permisos USE CATALOG y SELECT en workshop.gold.",
             "El facilitador ejecutó `generate_workshop_data.py`: además de `gold.*`, existe un CSV en `/Volumes/workshop/default/raw/transacciones_nuevas.csv` (export de `fact_transacciones`) para el paso 2 de medallión.",
-            "El módulo Lakeflow SDP (`sdp-workshop/`) ingiere JSON desde `sdp_landing/raw`; esos JSON comparten `customer_id` y `order_id` con `fact_pedidos_marketplace` — el pipeline SDP sigue siendo solo archivos; un JOIN con `gold` es opcional en análisis."
+            "El módulo Lakeflow SDP (`sdp-workshop/`) ingiere JSON desde `sdp_landing/raw` y materializa en el **mismo esquema `gold`** (`sdp_stg_*`, `fact_pedidos_agregado_diario_sdp`, `dim_cliente_digital_sdp`, …). Si no has corrido el pipeline, esas tablas aún no existen y el taller Genie sigue siendo coherente."
           ],
           "warningNote": null
         },
@@ -29,8 +29,8 @@
           "id": "eng-step-2",
           "stepNumber": 2,
           "title": "Pipeline medallion para ingesta de transacciones (CSV real del workshop)",
-          "description": "Simula el archivo diario del core: ese CSV ya fue generado a partir de `workshop.gold.fact_transacciones` (mismas columnas y defectos de calidad). Usa Genie Code para producir el código PySpark medallión; luego puedes ejecutarlo y comparar con la tabla gold original.",
-          "prompt": "Genera un pipeline PySpark completo para ingestar transacciones financieras desde un CSV. El pipeline debe seguir la arquitectura medallion:\n\n1. **Bronze**: Lee el CSV desde `/Volumes/workshop/default/raw/transacciones_nuevas.csv` con `spark.read.option('header', true).csv(...)` y schema inference. Guárdalo como tabla Delta en `workshop.bronze.transacciones_raw` con modo overwrite.\n\n2. **Silver**: Lee la tabla bronze. Aplica estas transformaciones:\n   - Elimina duplicados por transaction_id\n   - Filtra registros con amount <= 0 o NULL\n   - Convierte transaction_date a tipo DATE\n   - Estandariza transaction_type a Title Case\n   - Normaliza channel a mayúsculas\n   Guarda en `workshop.silver.transacciones_clean`.\n\n3. **Gold**: Lee la tabla silver. Calcula por customer_id y mes:\n   - total_transactions: conteo de transacciones\n   - total_amount: suma de amount\n   - avg_ticket: promedio de amount\n   - top_channel: canal más frecuente (usa mode)\n   Guarda en `workshop.gold.transacciones_mensual` (si ya existe, usa overwrite).\n\nIncluye TBLPROPERTIES con 'layer', 'domain' = 'payments', y 'classification' = 'confidential' en cada tabla. Habilita Change Data Feed.\n\nAl final, agrega una celda que compare conteos entre `workshop.gold.fact_transacciones` y `workshop.silver.transacciones_clean` (deberían ser muy cercanos salvo filtros de calidad).",
+          "description": "Simula el archivo diario del core: ese CSV ya fue generado a partir de `workshop.gold.fact_transacciones` (mismas columnas y defectos de calidad). La tabla gold del camino Genie (`fact_transacciones_mensual_genie`) la crea el facilitador vacía; al ejecutar tu pipeline queda el agregado mensual en el **mismo esquema `gold`** que el resto del workshop.",
+          "prompt": "Genera un pipeline PySpark completo para ingestar transacciones financieras desde un CSV. El pipeline debe seguir la arquitectura medallion:\n\n1. **Bronze**: Lee el CSV desde `/Volumes/workshop/default/raw/transacciones_nuevas.csv` con `spark.read.option('header', true).csv(...)` y schema inference. Guárdalo como tabla Delta en `workshop.bronze.transacciones_raw` con modo overwrite.\n\n2. **Silver**: Lee la tabla bronze. Aplica estas transformaciones:\n   - Elimina duplicados por transaction_id\n   - Filtra registros con amount <= 0 o NULL\n   - Convierte transaction_date a tipo DATE\n   - Estandariza transaction_type a Title Case\n   - Normaliza channel a mayúsculas\n   Guarda en `workshop.silver.transacciones_clean`.\n\n3. **Gold**: Lee la tabla silver. Calcula por customer_id y mes:\n   - total_transactions: conteo de transacciones\n   - total_amount: suma de amount\n   - avg_ticket: promedio de amount\n   - top_channel: canal más frecuente (usa mode)\n   Guarda en `workshop.gold.fact_transacciones_mensual_genie` (si ya existe, usa overwrite).\n\nIncluye TBLPROPERTIES con 'layer', 'domain' = 'payments', y 'classification' = 'confidential' en cada tabla. Habilita Change Data Feed.\n\nAl final, agrega una celda que compare conteos entre `workshop.gold.fact_transacciones` y `workshop.silver.transacciones_clean` (deberían ser muy cercanos salvo filtros de calidad).",
           "expectedOutput": "3 celdas de código PySpark + comparación de conteos. El CSV existe tras el setup del facilitador; si falla la lectura, revisa permisos READ FILES sobre el volumen `workshop.default.raw`.",
           "tips": [
             "Genie Code sirve para iterar rápido; el mismo flujo de negocio lo puedes implementar después como Lakeflow SDP declarativo (ver módulo `sdp-workshop/` en el repo).",
@@ -569,8 +569,8 @@
       "id": "sdp-lakeflow-workshop-repositorio",
       "strip": "sdp",
       "title": "Lakeflow SDP — Taller (catálogo workshop)",
-      "subtitle": "Material en sdp-workshop/ — mismo catálogo que Genie, esquemas sdp_*",
-      "description": "Taller práctico incluido en este repositorio bajo la carpeta sdp-workshop/: setup sin crear catálogo nuevo, pipeline orders + CDC customers en esquemas workshop.sdp_bronze, workshop.sdp_silver, workshop.sdp_gold. Origen pedagógico: njimenezr/dbx-Workshop-Declarative-Pipelines.",
+      "subtitle": "Material en sdp-workshop/ — mismo catálogo y esquema `gold` que Genie; landing solo en `sdp_landing`",
+      "description": "Taller práctico en `sdp-workshop/`: setup sin catálogo nuevo, pipeline orders + CDC customers. Las salidas Lakeflow viven en **`workshop.gold`** (`sdp_stg_pedidos_*`, `fact_pedidos_agregado_diario_sdp`, `sdp_stg_clientes_*`, `dim_cliente_digital_sdp`, …); solo el landing de archivos usa `sdp_landing`. Origen pedagógico: njimenezr/dbx-Workshop-Declarative-Pipelines.",
       "icon": "🔷",
       "color": "#C2410C",
       "estimatedMinutes": 100,
@@ -584,7 +584,7 @@
           "prompt": null,
           "expectedOutput": "Ubicación clara: notebooks/, transformations/, exercises/, sql/GRANTS_single_catalog.sql y README del módulo.",
           "tips": [
-            "Lee `sdp-workshop/README.md` antes de importar nada: explica por qué usamos `workshop.sdp_*` y no `workshop.gold`.",
+            "Lee `sdp-workshop/README.md` antes de importar nada: resume landing en `sdp_landing` y tablas del pipeline en `workshop.gold` (`sdp_stg_*`, `*_sdp`).",
             "En paralelo, el track Genie *Data Engineering* usa un CSV exportado desde `fact_transacciones` en `/Volumes/workshop/default/raw/` — mismo catálogo, otra forma de ingesta.",
             "Origen histórico del contenido: https://github.com/njimenezr/dbx-Workshop-Declarative-Pipelines"
           ],
@@ -594,7 +594,7 @@
           "id": "sdp-local-2",
           "stepNumber": 2,
           "title": "Setup (facilitador o cuenta con CREATE SCHEMA)",
-          "description": "Crea esquemas sdp_*, volumen raw y JSON de ejemplo bajo el catálogo compartido workshop.",
+          "description": "Crea el esquema `sdp_landing`, volumen `raw` y JSON de ejemplo bajo el catálogo compartido `workshop` (y asegura `workshop.gold` para el pipeline).",
           "prompt": null,
           "expectedOutput": "Volumen `/Volumes/workshop/sdp_landing/raw` con carpetas orders/, status/, customers/ y archivos 00.json.",
           "tips": [
@@ -609,7 +609,7 @@
           "title": "Permisos para grupo de participantes",
           "description": "Varios usuarios pueden compartir el mismo catálogo si tienen grants coherentes; evita dar BUCKET_OWNER a todos.",
           "prompt": null,
-          "expectedOutput": "Grupo con USE CATALOG workshop, USAGE/SELECT/MODIFY en sdp_* según política, READ/WRITE FILES en el volumen raw.",
+          "expectedOutput": "Grupo con USE CATALOG workshop, USAGE/SELECT (y si aplica MODIFY) sobre `workshop.gold`, READ/WRITE FILES en el volumen `sdp_landing.raw`.",
           "tips": [
             "Ajusta el nombre del grupo en `sdp-workshop/sql/GRANTS_single_catalog.sql` y ejecútalo como admin.",
             "Para talleres masivos, valorar un solo pipeline de demostración y SELECT compartido para reducir conflictos."
@@ -621,7 +621,7 @@
           "stepNumber": 4,
           "title": "Ejercicio 1 — Pipeline orders + calidad",
           "description": "Crea el pipeline multi-archivo apuntando a transformations/orders_pipeline.sql y configura la variable source.",
-          "prompt": "En 5 viñetas resume qué hace cada bloque de `sdp-workshop/transformations/orders_pipeline.sql` (tablas workshop.sdp_bronze.orders, workshop.sdp_silver.orders_clean, workshop.sdp_gold.order_summary).",
+          "prompt": "En 5 viñetas resume qué hace cada bloque de `sdp-workshop/transformations/orders_pipeline.sql` (tablas `workshop.gold.sdp_stg_pedidos_raw`, `workshop.gold.sdp_stg_pedidos_clean`, `workshop.gold.fact_pedidos_agregado_diario_sdp`).",
           "expectedOutput": "Resumen correcto de medallión + expectativas + read_files incremental.",
           "tips": [
             "Abre `sdp-workshop/exercises/01_Building_Pipeline_Data_Quality.sql` como guía.",
@@ -635,10 +635,10 @@
           "title": "Ejercicio 2 — CDC customers + producción",
           "description": "Añade customers_pipeline al mismo proyecto; mueve el archivo a transformations/ si el ejercicio lo indica.",
           "prompt": null,
-          "expectedOutput": "Pipeline descubre `customers_pipeline.sql`; tablas workshop.sdp_bronze.customers_* y workshop.sdp_silver.customers actualizadas.",
+          "expectedOutput": "Pipeline descubre `customers_pipeline.sql`; tablas `workshop.gold.sdp_stg_clientes_*` y `workshop.gold.dim_cliente_digital_sdp` actualizadas.",
           "tips": [
             "Sigue `sdp-workshop/exercises/02_CDC_and_Production.py`.",
-            "El SQL adaptado ya cualifica `workshop.sdp_*` para no colisionar con el esquema `gold` del taller Genie."
+            "El SQL del pipeline cualifica `workshop.gold.*` con prefijos `sdp_stg_` y sufijos `_sdp` para no pisar el núcleo (`dim_clientes`, `fact_transacciones`, …)."
           ],
           "warningNote": null
         },
@@ -652,7 +652,7 @@
           "tips": [
             "1. ¿Qué tabla de `workshop.gold` alimentarías primero desde un pipeline SDP en producción?",
             "2. ¿Cómo separarías entornos si no puedes crear muchos catálogos? (p. ej. sufijos de esquema dev/prod).",
-            "3. ¿Qué riesgo ves en que 20 analistas compartan las mismas tablas `sdp_*` y cómo lo mitigarías?"
+            "3. ¿Qué riesgo ves en que 20 analistas compartan las mismas tablas `*_sdp` en `gold` y cómo lo mitigarías?"
           ],
           "warningNote": null
         }
@@ -660,7 +660,7 @@
       "faq": [
         {
           "question": "¿Por qué no usamos workshop.gold para el pipeline SDP?",
-          "answer": "Ese esquema contiene las tablas sintéticas del taller Genie. El SDP escribe en workshop.sdp_bronze, workshop.sdp_silver y workshop.sdp_gold para aislar capas medallón del laboratorio SDP."
+          "answer": "`workshop.gold` concentra el núcleo del taller Genie, el marketplace de semilla (`fact_pedidos_marketplace`), la plantilla `fact_transacciones_mensual_genie` y —tras correr el pipeline SDP— las tablas `sdp_stg_*`, `fact_pedidos_agregado_diario_sdp` y `dim_*_sdp`. Solo los JSON viven en el volumen `sdp_landing`."
         },
         {
           "question": "¿Necesito CREATE CATALOG?",
