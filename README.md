@@ -18,7 +18,7 @@ Workshop práctico de Databricks Genie Code adaptado para **Banco Guayaquil**. C
 
 ## Módulo Spark Declarative Pipelines (SDP)
 
-- **Código y notebooks:** carpeta [`sdp-workshop/`](sdp-workshop/README.md) en **este** repositorio (catálogo único `workshop`; salidas SDP en **`gold`**, JSON en **`sdp_landing`**).
+- **Código y notebooks:** carpeta [`sdp-workshop/`](sdp-workshop/README.md) en **este** repositorio (catálogo único `workshop`; SDP en **bronze/silver/gold**; JSON en **`sdp_landing`**).
 - **Guía del participante en la app:** track `sdp-lakeflow-workshop-repositorio` (pestaña SDP).
 - **Origen pedagógico:** [dbx-Workshop-Declarative-Pipelines](https://github.com/njimenezr/dbx-Workshop-Declarative-Pipelines) (histórico; el taller operativo está consolidado en `sdp-workshop/`).
 
