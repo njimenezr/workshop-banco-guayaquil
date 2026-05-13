@@ -666,7 +666,7 @@ else:
 # MAGIC %md
 # MAGIC ## Landing SDP (JSON alineado — taller SDP sigue independiente)
 # MAGIC
-# MAGIC Crea `workshop.sdp_landing.raw` si hace falta y escribe `orders/`, `status/`, `customers/` con **mismos** `customer_id` (BGY-…) y `order_id` (ORD…) que `fact_pedidos_marketplace`. El pipeline SDP **solo** lee archivos; materializa en **`workshop.gold`** tablas `sdp_stg_*`, `fact_pedidos_agregado_diario_sdp` y `dim_*_sdp` (ver `transformations/*.sql`).
+# MAGIC Crea `workshop.sdp_landing.raw` si hace falta y escribe `orders/`, `status/`, `customers/` con **mismos** `customer_id` (BGY-…) y `order_id` (ORD…) que `fact_pedidos_marketplace`. El pipeline SDP **solo** lee archivos; materializa el medallón en **`workshop.bronze`**, **`workshop.silver`** y **`workshop.gold`** (`sdp_marketplace_*`, `fact_sdp_*`, `dim_sdp_*` — ver `sdp-workshop/transformations/*.sql`).
 
 # COMMAND ----------
 
@@ -863,7 +863,7 @@ print(f"  {CATALOG}.{SCHEMA}.fact_transacciones_mensual_genie: {_ftg_cnt:,} fila
 print()
 print("Complemento marketplace + caminos paralelos:")
 print("  dim_categoria_pedido_digital, fact_pedidos_marketplace — semilla alineada con JSON en sdp_landing.")
-print("  Tras ejecutar el pipeline SDP: tablas sdp_stg_*, fact_pedidos_agregado_diario_sdp, dim_cliente_digital_sdp en el mismo esquema gold.")
+print("  Tras ejecutar el pipeline SDP: bronze/silver/gold con sdp_marketplace_*, fact_sdp_marketplace_pedidos_diario, dim_sdp_marketplace_* (ver sdp-workshop/transformations/).")
 print()
 print("Defectos DQ inyectados:")
 print("  dim_clientes:         10 null country, 6 fechas futuras, 5 IDs dup, 15 segment minúsculas, 18 scores inválidos")

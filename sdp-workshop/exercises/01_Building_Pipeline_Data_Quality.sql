@@ -57,17 +57,17 @@
 -- MAGIC
 -- MAGIC ### Nuestro pipeline:
 -- MAGIC
--- MAGIC 1. **Bronze**: `workshop.gold.sdp_stg_pedidos_raw`
+-- MAGIC 1. **Bronze**: `workshop.bronze.sdp_marketplace_pedidos_raw`
 -- MAGIC    - Ingesta archivos JSON sin procesar desde el almacenamiento
 -- MAGIC    - Conserva todos los datos fuente
 -- MAGIC    - Agrega metadatos (hora de procesamiento, archivo de origen)
 -- MAGIC
--- MAGIC 2. **Silver**: `workshop.gold.sdp_stg_pedidos_clean`
+-- MAGIC 2. **Silver**: `workshop.silver.sdp_marketplace_pedidos_clean`
 -- MAGIC    - Analiza y valida tipos de datos
 -- MAGIC    - Aplica expectativas de calidad de datos
 -- MAGIC    - Selecciona columnas relevantes
 -- MAGIC
--- MAGIC 3. **Gold**: `workshop.gold.fact_pedidos_agregado_diario_sdp`
+-- MAGIC 3. **Gold**: `workshop.gold.fact_sdp_marketplace_pedidos_diario`
 -- MAGIC    - Agregaciones de negocio
 -- MAGIC    - Resúmenes diarios de pedidos
 -- MAGIC    - Listo para analítica/reportes
@@ -241,7 +241,7 @@
 -- MAGIC ```sql
 -- MAGIC CREATE OR REFRESH MATERIALIZED VIEW gold.orders_summary
 -- MAGIC AS SELECT date(order_timestamp) AS order_date, count(*) AS total_daily_orders
--- MAGIC FROM workshop.gold.sdp_stg_pedidos_clean
+-- MAGIC FROM workshop.silver.sdp_marketplace_pedidos_clean
 -- MAGIC GROUP BY date(order_timestamp);
 -- MAGIC ```
 -- MAGIC
@@ -304,7 +304,7 @@
 -- MAGIC El nuevo IDE facilita construir y probar iterativamente. En lugar de ejecutar todo el pipeline, puedes ejecutar solo una tabla.
 -- MAGIC
 -- MAGIC 1. Haz clic en `dataset actions`(▶️) arriba de `CREATE OR REFRESH STREAMING TABLE bronze.orders`
--- MAGIC 2. Selecciona **Run table** `workshop.gold.sdp_stg_pedidos_raw`
+-- MAGIC 2. Selecciona **Run table** `workshop.bronze.sdp_marketplace_pedidos_raw`
 -- MAGIC 2. En el Pipeline Graph verás solo la tabla de pedidos ejecutada
 -- MAGIC
 -- MAGIC Tras completar, deberías ver:
@@ -468,33 +468,33 @@
 -- COMMAND ----------
 
 -- Consultar la tabla bronze
-SELECT * FROM workshop.gold.sdp_stg_pedidos_raw LIMIT 10;
+SELECT * FROM workshop.bronze.sdp_marketplace_pedidos_raw LIMIT 10;
 
 -- COMMAND ----------
 
 -- Consultar la tabla silver
 SELECT order_id, order_timestamp, customer_id 
-FROM workshop.gold.sdp_stg_pedidos_clean 
+FROM workshop.silver.sdp_marketplace_pedidos_clean 
 ORDER BY order_timestamp DESC
 LIMIT 10;
 
 -- COMMAND ----------
 
 -- Consultar la agregación gold
-SELECT * FROM workshop.gold.fact_pedidos_agregado_diario_sdp 
+SELECT * FROM workshop.gold.fact_sdp_marketplace_pedidos_diario 
 ORDER BY order_date;
 
 -- COMMAND ----------
 
 -- Verificar conteos totales
 SELECT 
-  'orders' AS table_name, COUNT(*) AS row_count FROM workshop.gold.sdp_stg_pedidos_raw
+  'orders' AS table_name, COUNT(*) AS row_count FROM workshop.bronze.sdp_marketplace_pedidos_raw
 UNION ALL
 SELECT 
-  'orders_clean' AS table_name, COUNT(*) AS row_count FROM workshop.gold.sdp_stg_pedidos_clean
+  'orders_clean' AS table_name, COUNT(*) AS row_count FROM workshop.silver.sdp_marketplace_pedidos_clean
 UNION ALL
 SELECT 
-  'order_summary' AS table_name, COUNT(*) AS row_count FROM workshop.gold.fact_pedidos_agregado_diario_sdp;
+  'order_summary' AS table_name, COUNT(*) AS row_count FROM workshop.gold.fact_sdp_marketplace_pedidos_diario;
 
 -- COMMAND ----------
 

@@ -7,11 +7,13 @@
 GRANT USE CATALOG ON CATALOG workshop TO `workshop_sdp_participants`;
 
 GRANT USAGE ON SCHEMA workshop.sdp_landing TO `workshop_sdp_participants`;
--- Salidas del pipeline SDP viven en workshop.gold (sdp_stg_*, fact_*_sdp, dim_*_sdp).
--- Suele bastar con GRANT SELECT ON SCHEMA workshop.gold si el grupo ya lee el workshop completo.
+-- SDP escribe en bronze / silver / gold (mismo medallón que Genie; tablas prefijadas sdp_*).
 
--- Taller Genie (mismo grupo)
+GRANT USAGE ON SCHEMA workshop.bronze TO `workshop_sdp_participants`;
+GRANT USAGE ON SCHEMA workshop.silver TO `workshop_sdp_participants`;
 GRANT USAGE ON SCHEMA workshop.gold TO `workshop_sdp_participants`;
+GRANT SELECT ON ALL TABLES IN SCHEMA workshop.bronze TO `workshop_sdp_participants`;
+GRANT SELECT ON ALL TABLES IN SCHEMA workshop.silver TO `workshop_sdp_participants`;
 GRANT SELECT ON ALL TABLES IN SCHEMA workshop.gold TO `workshop_sdp_participants`;
 
 -- Volumen UC (ajusta según doc regional: READ FILES / EXECUTE / USAGE ON VOLUME)
