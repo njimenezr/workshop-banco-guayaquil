@@ -555,6 +555,121 @@
           "answer": "Sí. Cambia el tema en el prompt del Step 5: 'Introducción a PySpark', 'Cómo usar MLflow para modelos de scoring', 'Buenas prácticas de Delta Lake para datos bancarios', etc."
         }
       ]
+    },
+    {
+      "id": "sdp-lakeflow-workshop-repositorio",
+      "strip": "sdp",
+      "title": "Lakeflow SDP — Taller Declarative Pipelines",
+      "subtitle": "Medallión, expectativas, CDC y producción (repo oficial del módulo)",
+      "description": "Taller práctico de ~1,5 h basado en el repositorio de referencia: Lakeflow Spark Declarative Pipelines con arquitectura medallión, expectativas de calidad, Auto Loader, AUTO CDC INTO, SCD Tipo 1 y un solo pipeline que crece al añadir archivos en transformations/.",
+      "icon": "🔷",
+      "color": "#C2410C",
+      "estimatedMinutes": 100,
+      "participantCount": 0,
+      "steps": [
+        {
+          "id": "sdp-ref-1",
+          "stepNumber": 1,
+          "title": "Repositorio y estructura del taller",
+          "description": "Obtén el material oficial del módulo SDP y entiende qué archivo corresponde a cada fase antes de abrir Databricks.",
+          "prompt": "Resume en 8 viñetas (español) la estructura del taller Lakeflow SDP descrita en el README de este repositorio, incluyendo duración aproximada de cada bloque y nombres de carpetas/archivos: https://github.com/njimenezr/dbx-Workshop-Declarative-Pipelines — carpetas: SDP Workshop/0 - Setup, 1 - Building Pipeline with Data Quality, 2 - CDC and Production, transformations/, utilities/.",
+          "expectedOutput": "Lista clara: Setup → Ejercicio 1 (DQ + medallión con orders) → Ejercicio 2 (CDC clientes + producción), más mención de orders_pipeline.es.sql y customers_pipeline.es.sql.",
+          "tips": [
+            "Puedes clonar el repo con Git o descargar ZIP desde GitHub y subir la carpeta `SDP Workshop` al Workspace.",
+            "El README del repo está en español: `SDP Workshop/README.es.md`."
+          ],
+          "warningNote": null
+        },
+        {
+          "id": "sdp-ref-2",
+          "stepNumber": 2,
+          "title": "Setup: catálogo, esquemas, volumen y datos",
+          "description": "Ejecuta el notebook de preparación que crea el entorno aislado por usuario (Unity Catalog + volumen raw + datos de ejemplo).",
+          "prompt": null,
+          "expectedOutput": "Catálogo de taller creado (nombre impreso por el setup, p. ej. prefijo sdp_workshop), esquemas bronze / silver / gold, volumen con ruta raw, y datos de pedidos listos para el Ejercicio 1.",
+          "tips": [
+            "Abre y ejecuta **todas** las celdas de: `SDP Workshop/0 - Setup/0 - SETUP.es.py`.",
+            "Anota los valores que imprime el setup: catálogo por defecto, esquema y la variable de configuración `source` (ruta tipo `/Volumes/<catalogo>/default/raw`) — los pegarás en Pipeline Settings.",
+            "Requisitos del repo: Unity Catalog, privilegios para crear catálogo, compute serverless o cluster según política del workspace."
+          ],
+          "warningNote": "Si no tienes CREATE CATALOG, pide al administrador un catálogo dedicado y ajusta el setup con la ayuda del facilitador."
+        },
+        {
+          "id": "sdp-ref-3",
+          "stepNumber": 3,
+          "title": "Ejercicio 1 — Pipeline con calidad y medallión (orders)",
+          "description": "Crea tu primer Lakeflow Spark Declarative Pipeline: Bronze → Silver → Gold con expectativas y Auto Loader sobre JSON de pedidos.",
+          "prompt": "Explica en español (markdown corto) el rol de cada capa en el archivo `SDP Workshop/transformations/orders_pipeline.es.sql` del repo dbx-Workshop-Declarative-Pipelines: qué tablas materializa en bronze, silver y gold, y qué tipo de expectativas de calidad aplican antes de promover datos.",
+          "expectedOutput": "Resumen que mencione streaming tables / materialized views según aplique, `read_files` o ingesta incremental, y expectativas en ingesta.",
+          "tips": [
+            "Sigue las instrucciones paso a paso en: `SDP Workshop/1 - Building Pipeline with Data Quality/1 - Building Pipeline with Data Quality.es.sql`.",
+            "El código del pipeline vive en: `SDP Workshop/transformations/orders_pipeline.es.sql` (editor multi-archivo del pipeline).",
+            "En configuración del pipeline agrega la clave `source` con el valor de ruta que te dio el setup (ver troubleshooting del README del repo si aparece 'Variable source not found')."
+          ],
+          "warningNote": null
+        },
+        {
+          "id": "sdp-ref-4",
+          "stepNumber": 4,
+          "title": "Ejercicio 2 — CDC, mismo pipeline, producción",
+          "description": "Amplía el pipeline existente: mueve el SQL de clientes a `transformations/`, genera eventos CDC y configura programación y buenas prácticas.",
+          "prompt": null,
+          "expectedOutput": "Pipeline único que ahora incluye customers además de orders; tablas CDC en bronze/silver y SCD Tipo 1 en silver; agregado en gold según el laboratorio; capacidad de programar el pipeline.",
+          "tips": [
+            "Lee el notebook: `SDP Workshop/2 - CDC and Production/2 - CDC and Production.es.py`.",
+            "**Mueve** (no copies en duplicado) `SDP Workshop/2 - CDC and Production/customers_pipeline.es.sql` → `SDP Workshop/transformations/` — el pipeline redescubre el archivo.",
+            "Conceptos del repo: AUTO CDC INTO, KEYS, SEQUENCE BY, APPLY AS DELETE, comparación SCD1 vs SCD2 (teoría).",
+            "Consulta `SDP Workshop/CHANGES.es.md` en el repo para entender el diseño pedagógico (un solo pipeline, flujo por movimiento de archivos)."
+          ],
+          "warningNote": "El taller usa un catálogo por usuario; no mezcles nombres de catálogo con compañeros sin coordinación."
+        },
+        {
+          "id": "sdp-ref-5",
+          "stepNumber": 5,
+          "title": "Utilidades, buenas prácticas y enlaces oficiales",
+          "description": "Cierra el circuito con utilidades compartidas, políticas del repo y documentación Databricks.",
+          "prompt": "Genera una checklist markdown en español de 10 ítems para llevar un pipeline SDP del taller a un entorno 'demo pre-producción': permisos UC, pipelines.reset.allowed, notificaciones, revisión de métricas DQ, y enlaces a la documentación de Lakeflow, expectations y AUTO CDC (usa URLs de docs.databricks.com).",
+          "expectedOutput": "Checklist accionable con enlaces a docs oficiales.",
+          "tips": [
+            "En el repo: `SDP Workshop/utilities/utils.py` para helpers comunes.",
+            "Documentación sugerida en el README: Lakeflow index, AUTO CDC INTO, expectations, Unity Catalog best practices.",
+            "Cronograma orientativo del README del repo: ~10 min setup, ~50 min ejercicio 1, ~50 min ejercicio 2, buffer Q&A."
+          ],
+          "warningNote": null
+        },
+        {
+          "id": "sdp-ref-6",
+          "stepNumber": 6,
+          "title": "Reflexión y siguiente paso",
+          "description": "Conecta el taller genérico con tu contexto (por ejemplo datos bancarios en otro catálogo).",
+          "prompt": null,
+          "expectedOutput": null,
+          "tips": [
+            "1. ¿Qué fuente (archivos, CDC de core bancario) replicarías primero con el mismo patrón de `transformations/`?",
+            "2. ¿Mantendrías un solo pipeline multi-fuente o separarías dominios (pagos vs clientes) en tu organización?",
+            "3. ¿Qué expectativa del Ejercicio 1 aplicarías de inmediato a tablas `workshop.gold` del taller Banco Guayaquil?"
+          ],
+          "warningNote": null
+        }
+      ],
+      "faq": [
+        {
+          "question": "¿Dónde está el código fuente del taller SDP?",
+          "answer": "En GitHub: https://github.com/njimenezr/dbx-Workshop-Declarative-Pipelines — carpeta raíz del contenido: `SDP Workshop/`."
+        },
+        {
+          "question": "Aparece 'Variable source not found' al ejecutar el pipeline",
+          "answer": "En Pipeline Settings → Configuration agrega la clave `source` con el valor de ruta al volumen raw que imprimió el notebook de setup (ver README del repositorio, sección resolución de problemas)."
+        },
+        {
+          "question": "El pipeline no ve customers después del Ejercicio 2",
+          "answer": "Confirma que moviste `customers_pipeline.es.sql` a la carpeta `SDP Workshop/transformations/` (mismo nivel que `orders_pipeline.es.sql`) y que guardaste/refrescó el pipeline."
+        },
+        {
+          "question": "¿Este taller usa el catálogo workshop de Banco Guayaquil?",
+          "answer": "No por defecto: el repo crea su propio catálogo de taller (sdp_workshop…). El último paso del track sugiere reflexionar sobre analogías con `workshop.gold`."
+        }
+      ]
     }
   ]
 }

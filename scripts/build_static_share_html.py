@@ -30,6 +30,7 @@ def main() -> None:
         "data-governance": uris.get("track-governance", uris["databricks-symbol"]),
         "sdp-medallion-bancario": uris.get("track-engineering", uris["databricks-symbol"]),
         "sdp-calidad-datos-lakeflow": uris.get("track-governance", uris["databricks-symbol"]),
+        "sdp-lakeflow-workshop-repositorio": uris.get("track-engineering", uris["databricks-symbol"]),
     }
     icon_dbr = uris["databricks-symbol"]
 
@@ -46,7 +47,8 @@ const COLORS = {
   'data-science':'#7C3AED',
   'data-governance':'#0891B2',
   'sdp-medallion-bancario':'#C2410C',
-  'sdp-calidad-datos-lakeflow':'#0D9488'
+  'sdp-calidad-datos-lakeflow':'#0D9488',
+  'sdp-lakeflow-workshop-repositorio':'#C2410C'
 };
 const FULL = JSON.parse(document.getElementById('ws-embedded-tracks').textContent);
 const BY_ID = {};

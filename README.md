@@ -12,6 +12,27 @@ Workshop práctico de Databricks Genie Code adaptado para **Banco Guayaquil**. C
 | 📊 BI & Analytics | SQL desde lenguaje natural, Metric Views (NPL/mora), Genie Spaces, dashboards de riesgo | 105 min |
 | 🧠 Data Science & ML | Scoring crediticio, MLflow, Model Serving, applyInPandas por región/segmento, alertas SARLAFT | 105 min |
 | 🛡️ Data Governance | DQ regulatorio, CLS/RLS para datos financieros, framework de auditoría, Data Academy | 105 min |
+| 🔷 Lakeflow SDP (módulo aparte) | Taller Declarative Pipelines: medallión, DQ, CDC — ver sección *Módulo Spark Declarative Pipelines* más abajo | ~100 min |
+
+---
+
+## Módulo Spark Declarative Pipelines (SDP)
+
+El contenido **hands-on** de Lakeflow Spark Declarative Pipelines vive en un repositorio dedicado, alineado con la pestaña **Spark Declarative Pipelines** de la app de instrucciones:
+
+**[github.com/njimenezr/dbx-Workshop-Declarative-Pipelines](https://github.com/njimenezr/dbx-Workshop-Declarative-Pipelines)**
+
+| Ruta en el repo | Contenido |
+|-----------------|------------|
+| [SDP Workshop/README.es.md](https://github.com/njimenezr/dbx-Workshop-Declarative-Pipelines/blob/main/SDP%20Workshop/README.es.md) | Objetivos, prerequisitos, cronograma (~1,5 h), troubleshooting |
+| `SDP Workshop/0 - Setup/0 - SETUP.es.py` | Crea catálogo, esquemas `bronze` / `silver` / `gold`, volumen `raw`, datos de ejemplo |
+| `SDP Workshop/1 - Building Pipeline with Data Quality/…es.sql` | Ejercicio 1: pipeline con expectativas y medallión (orders) |
+| `SDP Workshop/transformations/orders_pipeline.es.sql` | Código del pipeline — ejercicio 1 |
+| `SDP Workshop/2 - CDC and Production/…es.py` | Ejercicio 2: CDC, producción, programación |
+| `SDP Workshop/2 - CDC and Production/customers_pipeline.es.sql` | Se **mueve** a `transformations/` durante el ejercicio 2 |
+| [SDP Workshop/CHANGES.es.md](https://github.com/njimenezr/dbx-Workshop-Declarative-Pipelines/blob/main/SDP%20Workshop/CHANGES.es.md) | Historial de diseño pedagógico (un solo pipeline, flujo por archivos) |
+
+En **`data/tracks.json`** el track `sdp-lakeflow-workshop-repositorio` (`strip: sdp`) guía al participante por estas rutas y enlaza prompts opcionales de Genie Code. Regenera la guía offline con `python3 scripts/build_static_share_html.py` después de editar `tracks.json`.
 
 ---
 
