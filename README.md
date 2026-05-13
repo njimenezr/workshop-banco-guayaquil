@@ -18,21 +18,9 @@ Workshop práctico de Databricks Genie Code adaptado para **Banco Guayaquil**. C
 
 ## Módulo Spark Declarative Pipelines (SDP)
 
-El contenido **hands-on** de Lakeflow Spark Declarative Pipelines vive en un repositorio dedicado, alineado con la pestaña **Spark Declarative Pipelines** de la app de instrucciones:
-
-**[github.com/njimenezr/dbx-Workshop-Declarative-Pipelines](https://github.com/njimenezr/dbx-Workshop-Declarative-Pipelines)**
-
-| Ruta en el repo | Contenido |
-|-----------------|------------|
-| [SDP Workshop/README.es.md](https://github.com/njimenezr/dbx-Workshop-Declarative-Pipelines/blob/main/SDP%20Workshop/README.es.md) | Objetivos, prerequisitos, cronograma (~1,5 h), troubleshooting |
-| `SDP Workshop/0 - Setup/0 - SETUP.es.py` | Crea catálogo, esquemas `bronze` / `silver` / `gold`, volumen `raw`, datos de ejemplo |
-| `SDP Workshop/1 - Building Pipeline with Data Quality/…es.sql` | Ejercicio 1: pipeline con expectativas y medallión (orders) |
-| `SDP Workshop/transformations/orders_pipeline.es.sql` | Código del pipeline — ejercicio 1 |
-| `SDP Workshop/2 - CDC and Production/…es.py` | Ejercicio 2: CDC, producción, programación |
-| `SDP Workshop/2 - CDC and Production/customers_pipeline.es.sql` | Se **mueve** a `transformations/` durante el ejercicio 2 |
-| [SDP Workshop/CHANGES.es.md](https://github.com/njimenezr/dbx-Workshop-Declarative-Pipelines/blob/main/SDP%20Workshop/CHANGES.es.md) | Historial de diseño pedagógico (un solo pipeline, flujo por archivos) |
-
-En **`data/tracks.json`** el track `sdp-lakeflow-workshop-repositorio` (`strip: sdp`) guía al participante por estas rutas y enlaza prompts opcionales de Genie Code. Regenera la guía offline con `python3 scripts/build_static_share_html.py` después de editar `tracks.json`.
+- **Código y notebooks:** carpeta [`sdp-workshop/`](sdp-workshop/README.md) en **este** repositorio (catálogo único `workshop`, esquemas `sdp_*`).
+- **Guía del participante en la app:** track `sdp-lakeflow-workshop-repositorio` (pestaña SDP).
+- **Origen pedagógico:** [dbx-Workshop-Declarative-Pipelines](https://github.com/njimenezr/dbx-Workshop-Declarative-Pipelines) (histórico; el taller operativo está consolidado en `sdp-workshop/`).
 
 ---
 
@@ -205,10 +193,16 @@ genie-bg-workshop/
 ├── main.py                     # Backend FastAPI
 ├── requirements.txt            # Dependencias Python
 ├── generate_workshop_data.py   # Genera las tablas workshop.gold.* (ejecutar una vez)
+├── sdp-workshop/               # Taller Lakeflow SDP (mismo catálogo workshop, esquemas sdp_*)
+│   ├── README.md
+│   ├── notebooks/00_SETUP_workshop_single_catalog.py
+│   ├── transformations/*.sql
+│   ├── exercises/
+│   └── sql/GRANTS_single_catalog.sql
 ├── scripts/
 │   └── build_static_share_html.py  # Genera workshop-app-compartir.html
 ├── data/
-│   └── tracks.json             # Contenido de los tracks (pasos, prompts, FAQs)
+│   └── tracks.json             # Tracks Genie + módulo SDP (`strip: sdp`)
 └── frontend/
     ├── index.html              # App (single-page) con API /api/tracks
     ├── workshop-app-compartir.html  # Guía autocontenida para participantes (regenerar con el script)
@@ -241,4 +235,4 @@ La columna `country_code` conserva el nombre por compatibilidad con el esquema d
 - Las tablas incluyen ~382 defectos de calidad intencionados para el track de Governance.
 - El track de Data Science requiere ML Runtime en el cluster (para XGBoost y MLflow).
 - Los steps que usan Foundation Model API tienen una advertencia visible en la app — ten un notebook de respaldo con el output esperado por si el endpoint no responde.
-- El cluster puede compartirse entre todos los participantes durante el workshop, o usar serverless compute si está disponible en el workspace.
+- El módulo **SDP** comparte el catálogo `workshop` pero escribe solo en esquemas `sdp_*` (ver `sdp-workshop/README.md`); el setup SDP no debe borrar `workshop.gold`.

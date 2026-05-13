@@ -6,6 +6,8 @@
 # MAGIC Incluye defectos de calidad intencionados para el track de Governance.
 # MAGIC
 # MAGIC **Idempotente** — seguro de re-ejecutar. Usa `CREATE OR REPLACE TABLE`.
+# MAGIC
+# MAGIC **Catálogo `workshop`:** si tu organización ya lo creó y no tienes `CREATE CATALOG`, pide al admin que otorgue `USE CATALOG` y `CREATE SCHEMA` / `CREATE TABLE` en `workshop`, o comenta la celda `CREATE CATALOG` y ejecuta solo a partir de `CREATE SCHEMA`.
 
 # COMMAND ----------
 
