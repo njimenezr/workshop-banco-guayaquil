@@ -2,7 +2,7 @@
 # MAGIC %md
 # MAGIC # Workshop Data Generator — Banco Guayaquil Genie Code Workshop
 # MAGIC
-# MAGIC Genera 5 tablas sintéticas de datos bancarios en `workshop.gold`.
+# MAGIC Genera tablas sintéticas de datos bancarios en `workshop.gold` (núcleo del taller + **complemento marketplace** enlazado al módulo SDP).
 # MAGIC Incluye defectos de calidad intencionados para el track de Governance.
 # MAGIC
 # MAGIC **Idempotente** — seguro de re-ejecutar. Usa `CREATE OR REPLACE TABLE`.
@@ -565,6 +565,211 @@ print(f"✅ {CATALOG}.{SCHEMA}.fact_kpis_diarios escrita")
 # COMMAND ----------
 
 # MAGIC %md
+# MAGIC ## Tabla 6: dim_categoria_pedido_digital
+# MAGIC
+# MAGIC Dimensión pequeña de **canasta / marketplace digital** (comercio electrónico sobre la misma base de clientes y sucursales). Sirve para análisis complementarios a `fact_transacciones` y para enlazar con los pedidos que alimentan el landing SDP (JSON).
+
+# COMMAND ----------
+
+MKT_CATEGORIES = [
+    ("CAT-DIG-01", "Canasta básica y pagos servicios", "Bajo"),
+    ("CAT-DIG-02", "Supermercado y conveniencia", "Bajo"),
+    ("CAT-DIG-03", "Farmacia y salud", "Medio"),
+    ("CAT-DIG-04", "Electrónica y electrodomésticos", "Medio"),
+    ("CAT-DIG-05", "Moda y calzado", "Bajo"),
+    ("CAT-DIG-06", "Agro y ferretería", "Bajo"),
+    ("CAT-DIG-07", "Entradas y entretenimiento", "Bajo"),
+    ("CAT-DIG-08", "Marketplace terceros (comisión)", "Alto"),
+]
+
+df_mkt_cat = pd.DataFrame(
+    [{"category_id": a, "category_name": b, "aml_risk_tier": c} for a, b, c in MKT_CATEGORIES]
+)
+spark.createDataFrame(df_mkt_cat).write.mode("overwrite").saveAsTable(f"{CATALOG}.{SCHEMA}.dim_categoria_pedido_digital")
+print(f"✅ {CATALOG}.{SCHEMA}.dim_categoria_pedido_digital ({len(df_mkt_cat)} filas)")
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## Tabla 7: fact_pedidos_marketplace
+# MAGIC
+# MAGIC Hechos de **pedidos digitales** (`order_id` estilo `ORD01000` …) con `customer_id` y `branch_id` **reales** de `dim_clientes` / `dim_sucursales`. No sustituye al core contable: `source_system = MARKETPLACE_DIGITAL`. Los mismos `order_id` / `customer_id` se escriben en el JSON de `sdp_landing` para que el taller SDP siga siendo **independiente** (solo lee archivos) pero **complementario** en SQL (`JOIN` opcional con `gold`).
+
+# COMMAND ----------
+
+np.random.seed(44)
+pool_cust = df_customers.loc[df_customers["country_code"].notna(), "customer_id"].tolist()
+if len(pool_cust) < 50:
+    pool_cust = df_customers["customer_id"].dropna().unique().tolist()
+
+cat_ids = [c[0] for c in MKT_CATEGORIES]
+n_mkt_orders = 174
+mkt_rows = []
+base_ts0 = pd.Timestamp("2025-01-01")
+
+for i in range(n_mkt_orders):
+    oid = f"ORD{1000 + i:05d}"
+    cid = np.random.choice(pool_cust)
+    crow = df_customers.loc[df_customers["customer_id"] == cid].iloc[0]
+    cc = crow["country_code"] if pd.notna(crow["country_code"]) else "GY"
+    bpool = df_branches.loc[df_branches["country_code"] == cc, "branch_id"].tolist()
+    if not bpool:
+        bpool = df_branches["branch_id"].tolist()
+    bid = np.random.choice(bpool)
+    cat_id = np.random.choice(cat_ids)
+    order_ts = base_ts0 + pd.Timedelta(days=int(np.random.randint(0, 480)), hours=int(np.random.randint(8, 20)))
+    amt = round(float(max(5.0, np.random.lognormal(3.6, 0.75))), 2)
+    ful = np.random.choice(
+        ["placed", "preparing", "on the way", "delivered", "canceled"],
+        p=[0.05, 0.08, 0.12, 0.68, 0.07],
+    )
+    mkt_rows.append(
+        {
+            "order_id": oid,
+            "customer_id": cid,
+            "branch_id": bid,
+            "category_id": cat_id,
+            "order_timestamp": order_ts,
+            "gross_amount": amt,
+            "currency": "USD",
+            "fulfillment_status": ful,
+            "source_system": "MARKETPLACE_DIGITAL",
+        }
+    )
+
+df_mkt = pd.DataFrame(mkt_rows)
+spark.createDataFrame(df_mkt).write.mode("overwrite").saveAsTable(f"{CATALOG}.{SCHEMA}.fact_pedidos_marketplace")
+print(f"✅ {CATALOG}.{SCHEMA}.fact_pedidos_marketplace ({len(df_mkt):,} filas) — FKs a dim_clientes, dim_sucursales, dim_categoria_pedido_digital")
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## Landing SDP (JSON alineado — taller SDP sigue independiente)
+# MAGIC
+# MAGIC Crea `workshop.sdp_landing.raw` si hace falta y escribe `orders/`, `status/`, `customers/` con **mismos** `customer_id` (BGY-…) y `order_id` (ORD…) que `fact_pedidos_marketplace`. El pipeline SDP **no** lee tablas `gold`; la relación es por diseño de datos y por `JOIN` opcional en notebooks de análisis.
+
+# COMMAND ----------
+
+try:
+    for _sdp in ("sdp_landing", "sdp_bronze", "sdp_silver", "sdp_gold"):
+        spark.sql(f"CREATE SCHEMA IF NOT EXISTS {CATALOG}.{_sdp}")
+        print(f"✅ Esquema {CATALOG}.{_sdp}")
+    spark.sql(f"CREATE VOLUME IF NOT EXISTS {CATALOG}.sdp_landing.raw")
+    SDP_RAW = f"/Volumes/{CATALOG}/sdp_landing/raw"
+    for sub in ("orders", "status", "customers"):
+        dbutils.fs.mkdirs(f"{SDP_RAW}/{sub}")
+
+    import json as _json
+
+    orders_json = []
+    for _, r in df_mkt.iterrows():
+        ts = r["order_timestamp"]
+        if hasattr(ts, "isoformat"):
+            ts_iso = pd.Timestamp(ts).isoformat()
+        else:
+            ts_iso = str(ts)
+        orders_json.append(
+            {
+                "order_id": r["order_id"],
+                "order_timestamp": ts_iso,
+                "customer_id": r["customer_id"],
+                "notifications": {
+                    "email": bool(np.random.randint(0, 2)),
+                    "sms": bool(np.random.randint(0, 2)),
+                },
+            }
+        )
+    dbutils.fs.put(f"{SDP_RAW}/orders/00.json", "\n".join(_json.dumps(o) for o in orders_json), overwrite=True)
+
+    statuses = ["placed", "preparing", "on the way", "delivered", "canceled"]
+    order_ids_arr = df_mkt["order_id"].tolist()
+    base_unix = pd.Timestamp("2025-01-01").timestamp()
+    status_lines = []
+    for i in range(536):
+        oid = np.random.choice(order_ids_arr)
+        st = np.random.choice(statuses)
+        status_lines.append(
+            _json.dumps(
+                {
+                    "order_id": oid,
+                    "order_status": st,
+                    "status_timestamp": base_unix + (i * 3600),
+                }
+            )
+        )
+    dbutils.fs.put(f"{SDP_RAW}/status/00.json", "\n".join(status_lines), overwrite=True)
+
+    # CDC clientes: solo clientes que aparecen en pedidos marketplace + eventos INSERT/UPDATE/DELETE
+    mkt_customers = df_mkt["customer_id"].unique().tolist()
+    np.random.shuffle(mkt_customers)
+    n_profile = min(24, len(mkt_customers))
+    profile_ids = mkt_customers[:n_profile]
+    cdc_events = []
+    base_cdc_ts = pd.Timestamp("2025-01-01").timestamp()
+
+    def _safe_email(idx: int) -> str:
+        return f"bgymkt{idx:04d}@digital.bgy.ec"
+
+    for j, cust_id in enumerate(profile_ids):
+        row = df_customers.loc[df_customers["customer_id"] == cust_id].iloc[0]
+        city = str(row["city"]) if pd.notna(row.get("city")) else "Guayaquil"
+        cc = str(row["country_code"]) if pd.notna(row.get("country_code")) else "GY"
+        cdc_events.append(
+            {
+                "customer_id": cust_id,
+                "name": str(row["customer_name"])[:120],
+                "email": _safe_email(j + 1),
+                "address": f"Av. Digital {100 + j}",
+                "city": city,
+                "state": cc,
+                "zip_code": f"{10000 + (j * 97) % 90000:05d}",
+                "operation": "INSERT",
+                "timestamp": base_cdc_ts + (j + 1) * 1000,
+            }
+        )
+
+    _upd_idx = [0, 4, 8, 12, 16]
+    for upd_j, idx in enumerate(_upd_idx):
+        if idx >= len(profile_ids):
+            continue
+        cust_id = profile_ids[idx]
+        cdc_events.append(
+            {
+                "customer_id": cust_id,
+                "name": str(df_customers.loc[df_customers["customer_id"] == cust_id, "customer_name"].iloc[0])[:120],
+                "email": _safe_email(500 + upd_j),
+                "address": f"{200 + upd_j * 11} Calle Río",
+                "city": "Quito",
+                "state": "PI",
+                "zip_code": f"{17000 + upd_j:05d}",
+                "operation": "UPDATE",
+                "timestamp": base_cdc_ts + 40_000 + upd_j * 200,
+            }
+        )
+
+    _del_idx = [2, 10]
+    for del_j, idx in enumerate(_del_idx):
+        if idx >= len(profile_ids):
+            continue
+        cust_id = profile_ids[idx]
+        cdc_events.append(
+            {
+                "customer_id": cust_id,
+                "operation": "DELETE",
+                "timestamp": base_cdc_ts + 70_000 + del_j * 150,
+            }
+        )
+
+    cdc_events.sort(key=lambda x: x["timestamp"])
+    dbutils.fs.put(f"{SDP_RAW}/customers/00.json", "\n".join(_json.dumps(c) for c in cdc_events), overwrite=True)
+
+    print(f"✅ SDP landing JSON alineado con gold: {SDP_RAW}/ (orders/status/customers)")
+except Exception as e:
+    print(f"⚠️ No se pudo crear sdp_landing o escribir JSON SDP: {e}")
+
+# COMMAND ----------
+
+# MAGIC %md
 # MAGIC ## CSV de “llegada del core” + esquemas medallión (Genie Data Engineering)
 # MAGIC
 # MAGIC El track **Data Engineering** (Genie Code) simula un archivo diario del core bancario. Esas filas salen de **`gold.fact_transacciones`** (mismo universo de datos que el resto del workshop).
@@ -573,7 +778,7 @@ print(f"✅ {CATALOG}.{SCHEMA}.fact_kpis_diarios escrita")
 # MAGIC
 # MAGIC **Ruta del CSV (única):** `/Volumes/workshop/default/raw/transacciones_nuevas.csv`
 # MAGIC
-# MAGIC El módulo **SDP** (`sdp-workshop/`) sigue usando **`/Volumes/workshop/sdp_landing/raw`** (pedidos JSON) — son dos fuentes distintas en el mismo catálogo: CSV bancario vs JSON de demo Lakeflow.
+# MAGIC El módulo **SDP** (`sdp-workshop/`) usa **`/Volumes/workshop/sdp_landing/raw`** (JSON). Tras las tablas 6–7, el mismo notebook **ya escribió** esos JSON alineados con `fact_pedidos_marketplace` (el pipeline SDP sigue leyendo solo archivos; el `JOIN` con `gold` es opcional en análisis).
 
 # COMMAND ----------
 
@@ -626,12 +831,16 @@ print("=" * 65)
 
 tables = [
     "dim_clientes", "dim_sucursales", "fact_transacciones",
-    "fact_cartera_creditos", "fact_kpis_diarios"
+    "fact_cartera_creditos", "fact_kpis_diarios",
+    "dim_categoria_pedido_digital", "fact_pedidos_marketplace",
 ]
 for t in tables:
     count = spark.sql(f"SELECT COUNT(*) as cnt FROM {CATALOG}.{SCHEMA}.{t}").collect()[0]["cnt"]
     print(f"  {CATALOG}.{SCHEMA}.{t}: {count:,} filas")
 
+print()
+print("Complemento marketplace (sin defectos DQ intencionados):")
+print("  dim_categoria_pedido_digital + fact_pedidos_marketplace — FKs a clientes/sucursales/categorías; JSON SDP alineado.")
 print()
 print("Defectos DQ inyectados:")
 print("  dim_clientes:         10 null country, 6 fechas futuras, 5 IDs dup, 15 segment minúsculas, 18 scores inválidos")
@@ -649,4 +858,4 @@ print("=" * 65)
 print("✅ Generación completa. Workshop listo.")
 print()
 print("Genie Data Engineering: CSV del core en /Volumes/workshop/default/raw/transacciones_nuevas.csv")
-print("Lakeflow SDP (sdp-workshop): JSON en /Volumes/workshop/sdp_landing/raw/")
+print("Lakeflow SDP (sdp-workshop): JSON en /Volumes/workshop/sdp_landing/raw/ (mismos ORD*/BGY-* que fact_pedidos_marketplace)")

@@ -16,12 +16,12 @@
           "title": "Explora tu landscape de datos",
           "description": "Abre un notebook nuevo y activa Genie Code (botón ✨ arriba a la derecha). Usa el siguiente prompt para explorar las tablas del workshop.",
           "prompt": "Muéstrame todas las tablas disponibles en el catálogo workshop, schema gold. Para cada tabla muéstrame:\n1. Nombre de la tabla\n2. Número de filas\n3. Lista de columnas con sus tipos de datos\n4. 3 filas de ejemplo\n\nFormatea todo como tablas legibles.",
-          "expectedOutput": "Una o más celdas que muestran las 5 tablas (dim_clientes, dim_sucursales, fact_transacciones, fact_cartera_creditos, fact_kpis_diarios) con sus schemas y datos de ejemplo.",
+          "expectedOutput": "Una o más celdas que muestran las tablas en `workshop.gold`: las 5 del núcleo bancario (dim_clientes, dim_sucursales, fact_transacciones, fact_cartera_creditos, fact_kpis_diarios) y las 2 complementarias marketplace (dim_categoria_pedido_digital, fact_pedidos_marketplace), con schemas y datos de ejemplo.",
           "tips": [
             "Si Genie Code no responde, verifica que tienes un cluster activo asignado al notebook.",
             "Si no ves las tablas, avisa al facilitador — necesitas permisos USE CATALOG y SELECT en workshop.gold.",
             "El facilitador ejecutó `generate_workshop_data.py`: además de `gold.*`, existe un CSV en `/Volumes/workshop/default/raw/transacciones_nuevas.csv` (export de `fact_transacciones`) para el paso 2 de medallión.",
-            "El módulo Lakeflow SDP (`sdp-workshop/`) usa otra ruta (`sdp_landing/raw`) con JSON de pedidos — mismo banco ficticio, dos estilos de ingesta."
+            "El módulo Lakeflow SDP (`sdp-workshop/`) ingiere JSON desde `sdp_landing/raw`; esos JSON comparten `customer_id` y `order_id` con `fact_pedidos_marketplace` — el pipeline SDP sigue siendo solo archivos; un JOIN con `gold` es opcional en análisis."
           ],
           "warningNote": null
         },

@@ -2,7 +2,7 @@
 
 Todo el material del taller **Spark Declarative Pipelines** vive en esta carpeta del mismo repositorio que el workshop Banco Guayaquil / Genie Code.
 
-**Cómo encaja con Genie Code:** el track *Data Engineering* usa un **CSV** exportado desde `workshop.gold.fact_transacciones` (ruta `/Volumes/workshop/default/raw/transacciones_nuevas.csv`) para prototipar medallión en PySpark con Genie. Este módulo SDP usa **JSON** de pedidos/clientes en `/Volumes/workshop/sdp_landing/raw` — mismo catálogo, **dos historias de ingesta** (archivo plano “core” vs. Lakeflow declarativo).
+**Cómo encaja con Genie Code:** el track *Data Engineering* usa un **CSV** exportado desde `workshop.gold.fact_transacciones` (ruta `/Volumes/workshop/default/raw/transacciones_nuevas.csv`) para prototipar medallión en PySpark con Genie. Este módulo SDP sigue siendo **independiente** (solo `read_files` sobre JSON), pero los JSON se generan desde el mismo notebook que el resto del workshop: **`workshop.gold.fact_pedidos_marketplace`** y **`dim_categoria_pedido_digital`** definen pedidos digitales con `customer_id` / `branch_id` reales; el generador escribe esas filas también en `/Volumes/workshop/sdp_landing/raw`. Así puedes hacer **JOIN** opcional entre `workshop.sdp_silver.*` y `workshop.gold.dim_clientes` sin que el pipeline SDP lea tablas `gold`.
 
 Diseño basado en el taller original [dbx-Workshop-Declarative-Pipelines](https://github.com/njimenezr/dbx-Workshop-Declarative-Pipelines), adaptado para **un solo catálogo Unity** (`workshop`) y permisos típicos de clientes corporativos.
 
@@ -20,9 +20,11 @@ Diseño basado en el taller original [dbx-Workshop-Declarative-Pipelines](https:
 | `workshop.sdp_silver` | Silver + tabla `customers` (SCD1) |
 | `workshop.sdp_gold` | Vistas materializadas gold |
 
+**Complemento en `workshop.gold` (no los lee el pipeline SDP):** `dim_categoria_pedido_digital` y `fact_pedidos_marketplace` describen el mismo universo de clientes/sucursales; el generador del workshop escribe el landing JSON a partir de esa fact. Así puedes cruzar `sdp_silver.orders_clean` con `dim_clientes` en un notebook aparte.
+
 ## Orden de trabajo (participante)
 
-1. El facilitador (o cuenta de servicio) ejecutó **`notebooks/00_SETUP_workshop_single_catalog.py`** y aplicó **`sql/GRANTS_single_catalog.sql`** al grupo de asistentes.
+1. El facilitador ejecutó **`generate_workshop_data.py`** (tablas `gold`, CSV core, esquemas `sdp_*`, volumen y JSON en `sdp_landing`) y, si aplica, **`notebooks/00_SETUP_workshop_single_catalog.py`** (asegura carpetas; **no** sobrescribe JSON si ya existe `workshop.gold.fact_pedidos_marketplace`). Aplique **`sql/GRANTS_single_catalog.sql`** al grupo de asistentes.
 2. Sube esta carpeta `sdp-workshop/` al Workspace manteniendo rutas relativas (`transformations/`, `exercises/`).
 3. Crea un **Lakeflow Spark Declarative Pipeline** (editor multi-archivo) apuntando a `transformations/orders_pipeline.sql` (y luego añade `customers_pipeline.sql` en el ejercicio 2).
 4. En **Pipeline settings → Configuration** define la clave **`source`** con el valor impreso por el setup, normalmente  

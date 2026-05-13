@@ -1,6 +1,6 @@
 # Genie Code Workshop — Banco Guayaquil
 
-Workshop práctico de Databricks Genie Code adaptado para **Banco Guayaquil**. Cubre 4 tracks de ~105 minutos sobre el catálogo **`workshop`**: datos sintéticos en **`gold`**, CSV de transacciones para medallión PySpark (Genie), y el módulo **Lakeflow SDP** en `sdp-workshop/` sobre el mismo catálogo. Así Genie (velocidad y variedad de tareas) y SDP (pipelines declarativos claros) comparten contexto.
+Workshop práctico de Databricks Genie Code adaptado para **Banco Guayaquil**. Cubre 4 tracks de ~105 minutos sobre el catálogo **`workshop`**: datos sintéticos en **`gold`** (núcleo bancario + **marketplace digital** complementario al SDP), CSV de transacciones para medallión PySpark (Genie), y el módulo **Lakeflow SDP** en `sdp-workshop/` sobre el mismo catálogo. El pipeline SDP sigue siendo solo archivos; los `customer_id` del JSON coinciden con `dim_clientes` para cruces opcionales en SQL.
 
 ---
 
@@ -51,7 +51,7 @@ Estos pasos los ejecuta el facilitador **antes del workshop**. Tiempo estimado: 
 4. Abre el notebook `generate_workshop_data` que subiste en el Paso 1.
 5. En la esquina superior derecha, selecciona el cluster recién creado.
 6. Haz clic en **Run all** (▶▶) o `Shift + Enter` celda por celda.
-7. Al terminar, el output final debe mostrar las tablas en `workshop.gold` **y** la línea que confirma el CSV en `/Volumes/workshop/default/raw/transacciones_nuevas.csv` (export de `fact_transacciones` para el track Genie Data Engineering).
+7. Al terminar, el output final debe mostrar las tablas en `workshop.gold` (incluidas las de **marketplace digital** complementarias al SDP), **y** las líneas que confirman el CSV en `/Volumes/workshop/default/raw/transacciones_nuevas.csv` y el JSON SDP en `/Volumes/workshop/sdp_landing/raw/` (mismos `order_id` / `customer_id` que `fact_pedidos_marketplace`).
 
 ```
 ✅ workshop.gold.dim_clientes
@@ -59,10 +59,13 @@ Estos pasos los ejecuta el facilitador **antes del workshop**. Tiempo estimado: 
 ✅ workshop.gold.fact_transacciones
 ✅ workshop.gold.fact_cartera_creditos
 ✅ workshop.gold.fact_kpis_diarios
+✅ workshop.gold.dim_categoria_pedido_digital
+✅ workshop.gold.fact_pedidos_marketplace
+✅ SDP landing JSON alineado con gold: /Volumes/workshop/sdp_landing/raw/
 ✅ CSV exportado ... /Volumes/workshop/default/raw/transacciones_nuevas.csv
 ✅ Generación completa. Workshop listo.
 Genie Data Engineering: CSV del core en /Volumes/workshop/default/raw/transacciones_nuevas.csv
-Lakeflow SDP (sdp-workshop): JSON en /Volumes/workshop/sdp_landing/raw/
+Lakeflow SDP (sdp-workshop): JSON en /Volumes/workshop/sdp_landing/raw/ (alineado con fact_pedidos_marketplace)
 ```
 
 > El notebook es idempotente — si algo falla, puedes ejecutarlo de nuevo sin problema.
@@ -73,12 +76,14 @@ Lakeflow SDP (sdp-workshop): JSON en /Volumes/workshop/sdp_landing/raw/
 
 1. En la barra lateral, haz clic en **Catalog** (ícono de catálogo).
 2. Navega a **workshop** → **gold**.
-3. Confirma que las 5 tablas existen y tienen datos:
+3. Confirma que existen **7 tablas** en `gold` y tienen datos:
    - `dim_clientes` (~2,500 filas)
    - `dim_sucursales` (~136 filas)
    - `fact_transacciones` (~200K filas)
    - `fact_cartera_creditos` (~5,000 filas)
    - `fact_kpis_diarios` (~4,000 filas)
+   - `dim_categoria_pedido_digital` (8 filas — categorías marketplace)
+   - `fact_pedidos_marketplace` (~174 filas — pedidos digitales enlazados a clientes/sucursales; fuente lógica del JSON SDP)
 
 ---
 
@@ -165,7 +170,7 @@ databricks apps deploy genie-bg-workshop \
 
 Antes de que lleguen los participantes, confirma cada punto:
 
-- [ ] Las 5 tablas existen en `workshop.gold` con datos y el CSV `/Volumes/workshop/default/raw/transacciones_nuevas.csv` existe (Genie DE paso 2)
+- [ ] Las **7 tablas** existen en `workshop.gold` con datos, el CSV `/Volumes/workshop/default/raw/transacciones_nuevas.csv` existe (Genie DE paso 2) y el JSON SDP está en `/Volumes/workshop/sdp_landing/raw/` (tras `generate_workshop_data.py`, alineado con `fact_pedidos_marketplace`)
 - [ ] Los participantes tienen permisos `SELECT` en `workshop.gold`
 - [ ] Foundation Model API responde con `200`
 - [ ] El botón ✨ Genie Code aparece en notebooks
@@ -195,7 +200,7 @@ genie-bg-workshop/
 ├── app.yaml                    # Configuración Databricks Apps
 ├── main.py                     # Backend FastAPI
 ├── requirements.txt            # Dependencias Python
-├── generate_workshop_data.py   # Genera las tablas workshop.gold.* (ejecutar una vez)
+├── generate_workshop_data.py   # Genera gold (núcleo + marketplace), CSV core, esquemas sdp_* y JSON sdp_landing (ejecutar una vez)
 ├── sdp-workshop/               # Taller Lakeflow SDP (mismo catálogo workshop, esquemas sdp_*)
 │   ├── README.md
 │   ├── notebooks/00_SETUP_workshop_single_catalog.py
