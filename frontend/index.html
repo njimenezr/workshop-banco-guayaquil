@@ -125,6 +125,7 @@
     .track-header-bar {
       background:#FFF; border-bottom:1px solid var(--border);
       padding:16px 0;
+      scroll-margin-top: 96px;
     }
     .track-header-inner {
       max-width:1280px; margin:0 auto; padding:0 32px;
@@ -354,7 +355,11 @@ function setStrip(s) {
 function setStep(i) {
   state.step = i;
   render();
-  document.querySelector('#app .step')?.scrollIntoView({behavior:'smooth',block:'start'});
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      document.querySelector('#app .track-header-bar')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  });
 }
 
 function toggleDone(stepId) {

@@ -13,7 +13,7 @@
 -- MAGIC ## Duración: ~50 minutos
 -- MAGIC
 -- MAGIC ## Prerrequisitos
--- MAGIC - Haber ejecutado el cuaderno **0-SETUP.py**
+-- MAGIC - Haber ejecutado **`generate_workshop_data.py`** (Run all) en el workspace — crea esquemas, volumen `ingest.raw`, JSON y CSV
 
 -- COMMAND ----------
 
@@ -57,17 +57,17 @@
 -- MAGIC
 -- MAGIC ### Nuestro pipeline:
 -- MAGIC
--- MAGIC 1. **Bronze**: `workshop.bronze.sdp_marketplace_pedidos_raw`
+-- MAGIC 1. **Bronze**: `workshop.bronze.marketplace_pedidos_raw`
 -- MAGIC    - Ingesta archivos JSON sin procesar desde el almacenamiento
 -- MAGIC    - Conserva todos los datos fuente
 -- MAGIC    - Agrega metadatos (hora de procesamiento, archivo de origen)
 -- MAGIC
--- MAGIC 2. **Silver**: `workshop.silver.sdp_marketplace_pedidos_clean`
+-- MAGIC 2. **Silver**: `workshop.silver.marketplace_pedidos_clean`
 -- MAGIC    - Analiza y valida tipos de datos
 -- MAGIC    - Aplica expectativas de calidad de datos
 -- MAGIC    - Selecciona columnas relevantes
 -- MAGIC
--- MAGIC 3. **Gold**: `workshop.gold.fact_sdp_marketplace_pedidos_diario`
+-- MAGIC 3. **Gold**: `workshop.gold.fact_marketplace_pedidos_diario`
 -- MAGIC    - Agregaciones de negocio
 -- MAGIC    - Resúmenes diarios de pedidos
 -- MAGIC    - Listo para analítica/reportes
@@ -182,9 +182,9 @@
 -- MAGIC 1. En **Configuration**, haz clic en **Add configuration**
 -- MAGIC 2. **Key**: `source`
 -- MAGIC 3. **Value**: Tu ruta de volumen del setup
--- MAGIC    - Formato: `/Volumes/{tu-catalogo}/default/raw`
--- MAGIC    - Ejemplo: `/Volumes/workshop/sdp_landing/raw`
--- MAGIC    - Si no recuerdas: Revisa la salida de 0-SETUP
+-- MAGIC    - Formato: `/Volumes/{tu-catalogo}/ingest/raw`
+-- MAGIC    - Ejemplo: `/Volumes/workshop/ingest/raw`
+-- MAGIC    - Si no recuerdas la ruta: revisa la salida final de `generate_workshop_data.py`
 -- MAGIC 4. Haz clic en **Save**
 -- MAGIC
 -- MAGIC ### Paso 7: Guardar ajustes
@@ -241,7 +241,7 @@
 -- MAGIC ```sql
 -- MAGIC CREATE OR REFRESH MATERIALIZED VIEW gold.orders_summary
 -- MAGIC AS SELECT date(order_timestamp) AS order_date, count(*) AS total_daily_orders
--- MAGIC FROM workshop.silver.sdp_marketplace_pedidos_clean
+-- MAGIC FROM workshop.silver.marketplace_pedidos_clean
 -- MAGIC GROUP BY date(order_timestamp);
 -- MAGIC ```
 -- MAGIC
@@ -289,7 +289,7 @@
 -- MAGIC - Verifica que `source` esté configurado correctamente
 -- MAGIC
 -- MAGIC **Error: "Schema not found"**
--- MAGIC - Asegúrate de que 0-SETUP.py se ejecutó correctamente
+-- MAGIC - Asegúrate de que `generate_workshop_data.py` se ejecutó correctamente
 -- MAGIC - Verifica Default Catalog en Settings
 -- MAGIC
 -- MAGIC **Error: "Permission denied"**
@@ -304,7 +304,7 @@
 -- MAGIC El nuevo IDE facilita construir y probar iterativamente. En lugar de ejecutar todo el pipeline, puedes ejecutar solo una tabla.
 -- MAGIC
 -- MAGIC 1. Haz clic en `dataset actions`(▶️) arriba de `CREATE OR REFRESH STREAMING TABLE bronze.orders`
--- MAGIC 2. Selecciona **Run table** `workshop.bronze.sdp_marketplace_pedidos_raw`
+-- MAGIC 2. Selecciona **Run table** `workshop.bronze.marketplace_pedidos_raw`
 -- MAGIC 2. En el Pipeline Graph verás solo la tabla de pedidos ejecutada
 -- MAGIC
 -- MAGIC Tras completar, deberías ver:
@@ -418,7 +418,7 @@
 -- MAGIC # Limpiar username para nombres (remover caracteres especiales)
 -- MAGIC clean_username = re.sub(r'[^a-z0-9]', '_', username.lower())
 -- MAGIC
--- MAGIC working_dir = '/Volumes/workshop/sdp_landing/raw'
+-- MAGIC working_dir = '/Volumes/workshop/ingest/raw'
 -- MAGIC
 -- MAGIC result = add_orders_file(spark, working_dir, file_number=1, num_orders=25)
 -- MAGIC print(result)
@@ -468,33 +468,33 @@
 -- COMMAND ----------
 
 -- Consultar la tabla bronze
-SELECT * FROM workshop.bronze.sdp_marketplace_pedidos_raw LIMIT 10;
+SELECT * FROM workshop.bronze.marketplace_pedidos_raw LIMIT 10;
 
 -- COMMAND ----------
 
 -- Consultar la tabla silver
 SELECT order_id, order_timestamp, customer_id 
-FROM workshop.silver.sdp_marketplace_pedidos_clean 
+FROM workshop.silver.marketplace_pedidos_clean 
 ORDER BY order_timestamp DESC
 LIMIT 10;
 
 -- COMMAND ----------
 
 -- Consultar la agregación gold
-SELECT * FROM workshop.gold.fact_sdp_marketplace_pedidos_diario 
+SELECT * FROM workshop.gold.fact_marketplace_pedidos_diario 
 ORDER BY order_date;
 
 -- COMMAND ----------
 
 -- Verificar conteos totales
 SELECT 
-  'orders' AS table_name, COUNT(*) AS row_count FROM workshop.bronze.sdp_marketplace_pedidos_raw
+  'orders' AS table_name, COUNT(*) AS row_count FROM workshop.bronze.marketplace_pedidos_raw
 UNION ALL
 SELECT 
-  'orders_clean' AS table_name, COUNT(*) AS row_count FROM workshop.silver.sdp_marketplace_pedidos_clean
+  'orders_clean' AS table_name, COUNT(*) AS row_count FROM workshop.silver.marketplace_pedidos_clean
 UNION ALL
 SELECT 
-  'order_summary' AS table_name, COUNT(*) AS row_count FROM workshop.gold.fact_sdp_marketplace_pedidos_diario;
+  'order_summary' AS table_name, COUNT(*) AS row_count FROM workshop.gold.fact_marketplace_pedidos_diario;
 
 -- COMMAND ----------
 

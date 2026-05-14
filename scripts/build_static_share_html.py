@@ -97,7 +97,13 @@ function setStrip(s) {
 function setStep(i) {
   state.step = i;
   render();
-  document.querySelector('#app .step')?.scrollIntoView({behavior:'smooth',block:'start'});
+  // Alinear siempre el inicio del track (título + progreso + pastillas), no la tarjeta del paso:
+  // antes scrollIntoView(.step) subía tanto el contenido que la vista quedaba "muy abajo" y se perdía el contexto.
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      document.querySelector('#app .track-header-bar')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  });
 }
 
 function toggleDone(stepId) {
@@ -330,7 +336,8 @@ init();
     .card-name { font-size:16px; font-weight:700; margin-bottom:4px; }
     .card-sub { font-size:13px; color:var(--text2); line-height:1.4; }
     .card-meta-row { display:flex; gap:12px; margin-top:10px; font-size:12px; color:var(--text3); }
-    .track-header-bar { background:#FFF; border-bottom:1px solid var(--border); padding:16px 0; }
+    /* scroll-margin: al cambiar de paso, scrollIntoView alinea bajo el banner + topbar sticky */
+    .track-header-bar { background:#FFF; border-bottom:1px solid var(--border); padding:16px 0; scroll-margin-top: 96px; }
     .track-header-inner { max-width:1280px; margin:0 auto; padding:0 32px; display:flex; align-items:center; justify-content:space-between; }
     .track-title-group { display:flex; align-items:center; gap:14px; }
     .track-title-group .icon { font-size:32px; }

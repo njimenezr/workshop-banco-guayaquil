@@ -124,6 +124,7 @@
     .track-header-bar {
       background:#FFF; border-bottom:1px solid var(--border);
       padding:16px 0;
+      scroll-margin-top: 96px;
     }
     .track-header-inner {
       max-width:1280px; margin:0 auto; padding:0 32px;
@@ -316,7 +317,7 @@ const TRACKS_DATA = {"tracks":[{"id":"data-engineering","title":"Data Engineerin
 
 Formatea todo como tablas legibles.","expectedOutput":"Una o más celdas que muestran las 5 tablas (dim_clientes, dim_sucursales, fact_transacciones, fact_cartera_creditos, fact_kpis_diarios) con sus schemas y datos de ejemplo.","tips":["Si Genie Code no responde, verifica que tienes un cluster activo asignado al notebook.","Si no ves las tablas, avisa al facilitador — necesitas permisos USE CATALOG y SELECT en workshop.gold."],"warningNote":null},{"id":"eng-step-2","stepNumber":2,"title":"Pipeline medallion para ingesta de transacciones","description":"El equipo de pagos recibe un CSV diario del core bancario con transacciones nuevas. Usa Genie Code para generar el pipeline de ingesta completo siguiendo la arquitectura medallion.","prompt":"Genera un pipeline PySpark completo para ingestar transacciones financieras desde un CSV. El pipeline debe seguir la arquitectura medallion:
 
-1. **Bronze**: Lee el CSV desde /Volumes/workshop/raw/transacciones_nuevas.csv con schema inference. Guárdalo como tabla Delta en workshop.bronze.transacciones_raw con modo overwrite.
+1. **Bronze**: Lee el CSV desde /Volumes/workshop/ingest/raw/transacciones_core/transacciones_nuevas.csv con schema inference. Guárdalo como tabla Delta en workshop.bronze.transacciones_raw con modo overwrite.
 
 2. **Silver**: Lee la tabla bronze. Aplica estas transformaciones:
    - Elimina duplicados por transaction_id
@@ -733,7 +734,11 @@ function goBack() {
 function setStep(i) {
   state.step = i;
   render();
-  document.querySelector('#app .step')?.scrollIntoView({behavior:'smooth',block:'start'});
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      document.querySelector('#app .track-header-bar')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  });
 }
 
 function toggleDone(stepId) {

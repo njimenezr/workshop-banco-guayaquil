@@ -1,13 +1,13 @@
 -------------------------------------------------------
--- PIPELINE CDC CLIENTES MARKETPLACE (SDP) — bronze / silver / gold
+-- PIPELINE CDC CLIENTES MARKETPLACE (Lakeflow) — bronze / silver / gold
 -------------------------------------------------------
 
-CREATE OR REFRESH STREAMING TABLE workshop.bronze.sdp_marketplace_clientes_cdc_raw
+CREATE OR REFRESH STREAMING TABLE workshop.bronze.marketplace_clientes_cdc_raw
   COMMENT "Bronze: eventos CDC JSON desde volumen (read_files)"
   TBLPROPERTIES (
     "quality" = "bronze",
     "pipelines.reset.allowed" = false,
-    "etl_path" = "sdp"
+    "etl_path" = "lakeflow"
   )
 AS
 SELECT
@@ -21,7 +21,7 @@ FROM STREAM read_files(
 
 -------------------------------------------------------
 
-CREATE OR REFRESH STREAMING TABLE workshop.silver.sdp_marketplace_clientes_cdc_clean
+CREATE OR REFRESH STREAMING TABLE workshop.silver.marketplace_clientes_cdc_clean
   (
     CONSTRAINT valid_id EXPECT (customer_id IS NOT NULL) ON VIOLATION FAIL UPDATE,
     CONSTRAINT valid_operation EXPECT (operation IS NOT NULL) ON VIOLATION DROP ROW,
@@ -35,22 +35,22 @@ CREATE OR REFRESH STREAMING TABLE workshop.silver.sdp_marketplace_clientes_cdc_c
       operation = 'DELETE'
     ) ON VIOLATION DROP ROW
   )
-  COMMENT "Silver: CDC validado (SDP)"
-  TBLPROPERTIES ("quality" = "silver", "etl_path" = "sdp")
+  COMMENT "Silver: CDC validado (Lakeflow)"
+  TBLPROPERTIES ("quality" = "silver", "etl_path" = "lakeflow")
 AS
 SELECT
   *,
   CAST(from_unixtime(timestamp) AS timestamp) AS timestamp_datetime
-FROM STREAM workshop.bronze.sdp_marketplace_clientes_cdc_raw;
+FROM STREAM workshop.bronze.marketplace_clientes_cdc_raw;
 
 -------------------------------------------------------
 
-CREATE OR REFRESH STREAMING TABLE workshop.gold.dim_sdp_marketplace_cliente
-  COMMENT "Gold: dimensión cliente digital marketplace SCD1 (SDP)";
+CREATE OR REFRESH STREAMING TABLE workshop.gold.dim_marketplace_cliente
+  COMMENT "Gold: dimensión cliente digital marketplace SCD1 (Lakeflow)";
 
 CREATE FLOW customers_cdc_flow AS
-AUTO CDC INTO workshop.gold.dim_sdp_marketplace_cliente
-FROM STREAM workshop.silver.sdp_marketplace_clientes_cdc_clean
+AUTO CDC INTO workshop.gold.dim_marketplace_cliente
+FROM STREAM workshop.silver.marketplace_clientes_cdc_clean
   KEYS (customer_id)
   APPLY AS DELETE WHEN operation = 'DELETE'
   SEQUENCE BY timestamp_datetime
@@ -59,9 +59,9 @@ FROM STREAM workshop.silver.sdp_marketplace_clientes_cdc_clean
 
 -------------------------------------------------------
 
-CREATE OR REFRESH MATERIALIZED VIEW workshop.gold.dim_sdp_marketplace_cliente_resumen
-  COMMENT "Gold: vista resumen perfil cliente marketplace (SDP)"
-  TBLPROPERTIES ("quality" = "gold", "domain" = "marketplace", "etl_path" = "sdp")
+CREATE OR REFRESH MATERIALIZED VIEW workshop.gold.dim_marketplace_cliente_resumen
+  COMMENT "Gold: vista resumen perfil cliente marketplace (Lakeflow)"
+  TBLPROPERTIES ("quality" = "gold", "domain" = "marketplace", "etl_path" = "lakeflow")
 AS
 SELECT
   customer_id,
@@ -69,4 +69,4 @@ SELECT
   state,
   city,
   current_timestamp() AS last_refreshed
-FROM workshop.gold.dim_sdp_marketplace_cliente;
+FROM workshop.gold.dim_marketplace_cliente;

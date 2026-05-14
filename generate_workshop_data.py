@@ -5,6 +5,8 @@
 # MAGIC Genera tablas sintéticas de datos bancarios en `workshop.gold` (núcleo del taller + **complemento marketplace** enlazado al módulo SDP).
 # MAGIC Incluye defectos de calidad intencionados para el track de Governance.
 # MAGIC
+# MAGIC **Preparación única (facilitador):** además de `gold`, crea esquemas **`ingest`**, **`bronze`**, **`silver`**, el volumen **`workshop.ingest.raw`**, carpetas de ingesta (JSON marketplace + CSV Genie) y escribe **JSON** + **CSV** para los tracks **Genie Data Engineering** y **Lakeflow SDP** — no hace falta otro notebook de setup.
+# MAGIC
 # MAGIC **Idempotente** — seguro de re-ejecutar. Usa `CREATE OR REPLACE TABLE`.
 # MAGIC
 # MAGIC **Catálogo `workshop`:** si tu organización ya lo creó y no tienes `CREATE CATALOG`, pide al admin que otorgue `USE CATALOG` y `CREATE SCHEMA` / `CREATE TABLE` en `workshop`, o comenta la celda `CREATE CATALOG` y ejecuta solo a partir de `CREATE SCHEMA`.
@@ -125,6 +127,29 @@ print(f"Total clientes: {total_customers:,} | Total sucursales: {total_branches}
 spark.sql(f"CREATE CATALOG IF NOT EXISTS {CATALOG}")
 spark.sql(f"CREATE SCHEMA IF NOT EXISTS {CATALOG}.{SCHEMA}")
 print(f"✅ {CATALOG}.{SCHEMA} listo")
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## Preparación Unity Catalog (todos los tracks)
+# MAGIC
+# MAGIC **Un solo notebook de preparación** para Genie Code y Lakeflow SDP: crea esquemas **`ingest`**, **`bronze`**, **`silver`**, **`gold`**, el volumen **`workshop.ingest.raw`** y las carpetas bajo `/Volumes/workshop/ingest/raw/` (**`orders/`**, **`status/`**, **`customers/`** para JSON del pipeline; **`transacciones_core/`** para el CSV del track Data Engineering).
+# MAGIC
+# MAGIC Las celdas posteriores rellenan tablas `gold`, JSON alineados con `fact_pedidos_marketplace` y el CSV desde `fact_transacciones`.
+
+# COMMAND ----------
+
+for _prep_schema in ("ingest", "bronze", "silver", SCHEMA):
+    spark.sql(f"CREATE SCHEMA IF NOT EXISTS {CATALOG}.{_prep_schema}")
+    print(f"✅ Esquema {CATALOG}.{_prep_schema}")
+
+spark.sql(f"CREATE VOLUME IF NOT EXISTS {CATALOG}.ingest.raw")
+print(f"✅ Volumen {CATALOG}.ingest.raw")
+
+_prep_ingest_root = f"/Volumes/{CATALOG}/ingest/raw"
+for _prep_sub in ("orders", "status", "customers", "transacciones_core"):
+    dbutils.fs.mkdirs(f"{_prep_ingest_root}/{_prep_sub}")
+print(f"✅ Carpetas en {_prep_ingest_root}/ (ingesta Genie + SDP)")
 
 # COMMAND ----------
 
@@ -593,7 +618,7 @@ print(f"✅ {CATALOG}.{SCHEMA}.dim_categoria_pedido_digital ({len(df_mkt_cat)} f
 # MAGIC %md
 # MAGIC ## Tabla 7: fact_pedidos_marketplace
 # MAGIC
-# MAGIC Hechos de **pedidos digitales** (`order_id` estilo `ORD01000` …) con `customer_id` y `branch_id` **reales** de `dim_clientes` / `dim_sucursales`. No sustituye al core contable: `source_system = MARKETPLACE_DIGITAL`. Los mismos `order_id` / `customer_id` se escriben en el JSON de `sdp_landing` para que el taller SDP siga siendo **independiente** (solo lee archivos) pero **complementario** en SQL (`JOIN` opcional con `gold`).
+# MAGIC Hechos de **pedidos digitales** (`order_id` estilo `ORD01000` …) con `customer_id` y `branch_id` **reales** de `dim_clientes` / `dim_sucursales`. No sustituye al core contable: `source_system = MARKETPLACE_DIGITAL`. Los mismos `order_id` / `customer_id` se escriben en el JSON de `ingest` para que el taller SDP siga siendo **independiente** (solo lee archivos) pero **complementario** en SQL (`JOIN` opcional con `gold`).
 
 # COMMAND ----------
 
@@ -666,16 +691,12 @@ else:
 # MAGIC %md
 # MAGIC ## Landing SDP (JSON alineado — taller SDP sigue independiente)
 # MAGIC
-# MAGIC Crea `workshop.sdp_landing.raw` si hace falta y escribe `orders/`, `status/`, `customers/` con **mismos** `customer_id` (BGY-…) y `order_id` (ORD…) que `fact_pedidos_marketplace`. El pipeline SDP **solo** lee archivos; materializa el medallón en **`workshop.bronze`**, **`workshop.silver`** y **`workshop.gold`** (`sdp_marketplace_*`, `fact_sdp_*`, `dim_sdp_*` — ver `sdp-workshop/transformations/*.sql`).
+# MAGIC Crea `workshop.ingest.raw` si hace falta y escribe `orders/`, `status/`, `customers/` con **mismos** `customer_id` (BGY-…) y `order_id` (ORD…) que `fact_pedidos_marketplace`. El pipeline SDP **solo** lee archivos; materializa el medallón en **`workshop.bronze`**, **`workshop.silver`** y **`workshop.gold`** (`marketplace_*`, `fact_marketplace_*`, `dim_marketplace_*` — ver `sdp-workshop/transformations/*.sql`).
 
 # COMMAND ----------
 
 try:
-    for _sdp in ("sdp_landing",):
-        spark.sql(f"CREATE SCHEMA IF NOT EXISTS {CATALOG}.{_sdp}")
-        print(f"✅ Esquema {CATALOG}.{_sdp}")
-    spark.sql(f"CREATE VOLUME IF NOT EXISTS {CATALOG}.sdp_landing.raw")
-    SDP_RAW = f"/Volumes/{CATALOG}/sdp_landing/raw"
+    SDP_RAW = f"/Volumes/{CATALOG}/ingest/raw"
     for sub in ("orders", "status", "customers"):
         dbutils.fs.mkdirs(f"{SDP_RAW}/{sub}")
 
@@ -785,7 +806,7 @@ try:
 
     print(f"✅ SDP landing JSON alineado con gold: {SDP_RAW}/ (orders/status/customers)")
 except Exception as e:
-    print(f"⚠️ No se pudo crear sdp_landing o escribir JSON SDP: {e}")
+    print(f"⚠️ No se pudo crear ingest o escribir JSON SDP: {e}")
 
 # COMMAND ----------
 
@@ -796,25 +817,23 @@ except Exception as e:
 # MAGIC
 # MAGIC Se crean también `workshop.bronze` y `workshop.silver` vacíos para que el código que genera Genie en el paso “medallión” pueda escribir sin error de esquema inexistente.
 # MAGIC
-# MAGIC **Ruta del CSV (única):** `/Volumes/workshop/default/raw/transacciones_nuevas.csv`
+# MAGIC **Ruta del CSV (Genie):** mismo volumen que el landing SDP — **`/Volumes/workshop/ingest/raw/transacciones_core/transacciones_nuevas.csv`** (carpeta **`transacciones_core`**, separada de `orders/`, `status/`, `customers/`).
 # MAGIC
-# MAGIC El módulo **SDP** (`sdp-workshop/`) usa **`/Volumes/workshop/sdp_landing/raw`** (JSON). Tras las tablas 6–7, el mismo notebook **ya escribió** esos JSON alineados con `fact_pedidos_marketplace` (el pipeline SDP sigue leyendo solo archivos; el `JOIN` con `gold` es opcional en análisis).
+# MAGIC El módulo **SDP** (`sdp-workshop/`) usa **`/Volumes/workshop/ingest/raw`** (JSON en las otras carpetas). Tras las tablas 6–7, el mismo notebook **ya escribió** esos JSON alineados con `fact_pedidos_marketplace` (el pipeline SDP sigue leyendo solo archivos; el `JOIN` con `gold` es opcional en análisis).
 
 # COMMAND ----------
 
 try:
-    # Esquemas para el laboratorio Genie (medallión PySpark)
+    # bronze/silver ya creados en “Preparación Unity Catalog”; idempotente por si se ejecuta esta celda sola
     for _sch in ("bronze", "silver"):
         spark.sql(f"CREATE SCHEMA IF NOT EXISTS {CATALOG}.{_sch}")
         print(f"✅ Esquema {CATALOG}.{_sch}")
 
-    # Volumen UC para exportar CSV (misma convención /Volumes/cat/schema/vol)
-    spark.sql(f"CREATE SCHEMA IF NOT EXISTS {CATALOG}.default")
-    spark.sql(f"CREATE VOLUME IF NOT EXISTS {CATALOG}.default.raw")
-    print(f"✅ Volumen {CATALOG}.default.raw")
+    INGEST_RAW = f"/Volumes/{CATALOG}/ingest/raw"
+    CSV_GENIE_SUBDIR = "transacciones_core"
+    dbutils.fs.mkdirs(f"{INGEST_RAW}/{CSV_GENIE_SUBDIR}")
 
-    RAW_VOL = f"/Volumes/{CATALOG}/default/raw"
-    EXPORT_DIR = f"{RAW_VOL}/_export_transacciones_tmp"
+    EXPORT_DIR = f"{INGEST_RAW}/{CSV_GENIE_SUBDIR}/_export_transacciones_tmp"
 
     try:
         dbutils.fs.rm(EXPORT_DIR, recurse=True)
@@ -829,14 +848,14 @@ try:
     if not parts:
         raise RuntimeError("No se generó part-*.csv en la exportación")
     parts.sort()
-    TARGET_CSV = f"{RAW_VOL}/transacciones_nuevas.csv"
+    TARGET_CSV = f"{INGEST_RAW}/{CSV_GENIE_SUBDIR}/transacciones_nuevas.csv"
     dbutils.fs.cp(parts[0], TARGET_CSV)
     dbutils.fs.rm(EXPORT_DIR, recurse=True)
     print(f"✅ CSV exportado (desde gold.fact_transacciones): {TARGET_CSV}")
     print("   Úsalo en el paso Genie 'Pipeline medallión' con spark.read.option('header',true).csv(...)")
 except Exception as e:
     print(f"⚠️ No se pudo crear volumen/CSV o esquemas bronze/silver: {e}")
-    print("   El facilitador puede crear workshop.default.raw, workshop.bronze, workshop.silver y exportar manualmente.")
+    print("   El facilitador puede crear workshop.ingest.raw, workshop.bronze, workshop.silver y exportar manualmente.")
 
 # COMMAND ----------
 
@@ -861,9 +880,10 @@ for t in tables:
 _ftg_cnt = spark.sql(f"SELECT COUNT(*) as cnt FROM {CATALOG}.{SCHEMA}.fact_transacciones_mensual_genie").collect()[0]["cnt"]
 print(f"  {CATALOG}.{SCHEMA}.fact_transacciones_mensual_genie: {_ftg_cnt:,} filas (camino Genie; 0 hasta ejecutar paso 2)")
 print()
+print("Preparación UC (todos los tracks): esquemas ingest / bronze / silver / gold, volumen ingest.raw y carpetas bajo /Volumes/workshop/ingest/raw/.")
 print("Complemento marketplace + caminos paralelos:")
-print("  dim_categoria_pedido_digital, fact_pedidos_marketplace — semilla alineada con JSON en sdp_landing.")
-print("  Tras ejecutar el pipeline SDP: bronze/silver/gold con sdp_marketplace_*, fact_sdp_marketplace_pedidos_diario, dim_sdp_marketplace_* (ver sdp-workshop/transformations/).")
+print("  dim_categoria_pedido_digital, fact_pedidos_marketplace — semilla alineada con JSON en ingest.")
+print("  Tras ejecutar el pipeline SDP: bronze/silver/gold con marketplace_*, fact_marketplace_pedidos_diario, dim_marketplace_* (ver sdp-workshop/transformations/).")
 print()
 print("Defectos DQ inyectados:")
 print("  dim_clientes:         10 null country, 6 fechas futuras, 5 IDs dup, 15 segment minúsculas, 18 scores inválidos")
@@ -880,5 +900,5 @@ for cc, info in COUNTRIES.items():
 print("=" * 65)
 print("✅ Generación completa. Workshop listo.")
 print()
-print("Genie Data Engineering: CSV del core en /Volumes/workshop/default/raw/transacciones_nuevas.csv")
-print("Lakeflow SDP (sdp-workshop): JSON en /Volumes/workshop/sdp_landing/raw/ (mismos ORD*/BGY-* que fact_pedidos_marketplace)")
+print("Genie Data Engineering: CSV del core en /Volumes/workshop/ingest/raw/transacciones_core/transacciones_nuevas.csv")
+print("Lakeflow SDP (sdp-workshop): JSON en /Volumes/workshop/ingest/raw/ (mismos ORD*/BGY-* que fact_pedidos_marketplace)")
