@@ -1,6 +1,6 @@
-# Genie Code Workshop — Banco Guayaquil
+# Genie Code Workshop — Pronaca
 
-Workshop práctico de Databricks Genie Code adaptado para **Banco Guayaquil**. Cubre 4 tracks de ~105 minutos sobre el catálogo **`workshop`**: datos sintéticos en **`gold`** (núcleo bancario + **marketplace digital** complementario al SDP), CSV de transacciones para medallión PySpark (Genie), y el módulo **Lakeflow SDP** en `sdp-workshop/` sobre el mismo catálogo. El pipeline SDP sigue siendo solo archivos; los `customer_id` del JSON coinciden con `dim_clientes` para cruces opcionales en SQL.
+Workshop práctico de Databricks Genie Code adaptado para **Pronaca** (cadena agroindustrial ficticia para el taller). Cubre 4 tracks de ~105 minutos sobre el catálogo **`workshop`**: datos sintéticos en **`gold`** (operación comercial + **marketplace digital** complementario al SDP), CSV tipo ERP para medallión PySpark (Genie), y el módulo **Lakeflow SDP** en `sdp-workshop/` sobre el mismo catálogo. El pipeline SDP sigue siendo solo archivos; los `customer_id` del JSON coinciden con `dim_clientes` para cruces opcionales en SQL.
 
 ---
 
@@ -103,7 +103,7 @@ GRANT USE SCHEMA ON SCHEMA workshop.gold TO `workshop_users`;
 GRANT SELECT ON ALL TABLES IN SCHEMA workshop.gold TO `workshop_users`;
 ```
 
-> Reemplaza `` `workshop_users` `` por el nombre real del grupo en el workspace de Banco Guayaquil. Si no existe un grupo, agrégalo desde **Settings → Identity & Access → Groups**.
+> Reemplaza `` `workshop_users` `` por el nombre real del grupo en el workspace de Pronaca. Si no existe un grupo, agrégalo desde **Settings → Identity & Access → Groups**.
 
 ---
 
@@ -152,11 +152,11 @@ La app muestra las instrucciones interactivas del workshop a los participantes.
 pip install databricks-cli
 
 # Sube el código al workspace (ajusta <tu-usuario> y la carpeta si lo deseas)
-databricks workspace import_dir . /Workspace/Users/<tu-usuario>/genie-bg-workshop --overwrite
+databricks workspace import_dir . /Workspace/Users/<tu-usuario>/workshop-pronaca --overwrite
 
 # Despliega la app
-databricks apps deploy genie-bg-workshop \
-  --source-code-path /Workspace/Users/<tu-usuario>/genie-bg-workshop
+databricks apps deploy workshop-pronaca \
+  --source-code-path /Workspace/Users/<tu-usuario>/workshop-pronaca
 ```
 
 **Opción B — Desde la UI:**
@@ -199,7 +199,7 @@ Para enviar la guía por correo, Teams o subirla a un bucket estático sin usar 
 ## Estructura del proyecto
 
 ```
-genie-bg-workshop/
+workshop-pronaca/
 ├── app.yaml                    # Configuración Databricks Apps
 ├── main.py                     # Backend FastAPI
 ├── requirements.txt            # Dependencias Python
@@ -244,7 +244,7 @@ La columna `country_code` conserva el nombre por compatibilidad con el esquema d
 
 ## Notas para el facilitador
 
-- Los datos son **100% sintéticos** — no contienen información real de Banco Guayaquil ni de sus clientes.
+- Los datos son **100% sintéticos** — no contienen información real de Pronaca ni de sus clientes.
 - Las tablas incluyen ~382 defectos de calidad intencionados para el track de Governance.
 - El track de Data Science requiere ML Runtime en el cluster (para XGBoost y MLflow).
 - Los steps que usan Foundation Model API tienen una advertencia visible en la app — ten un notebook de respaldo con el output esperado por si el endpoint no responde.
